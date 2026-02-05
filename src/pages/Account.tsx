@@ -5,14 +5,35 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { motion } from "framer-motion";
-import { User, Package, Heart, LogOut, Settings, MapPin, CreditCard } from "lucide-react";
+import { User, Package, Heart, LogOut, Settings, MapPin, Mail, Lock, Eye, EyeOff, AlertCircle } from "lucide-react";
+import { z } from "zod";
 
 type TabType = "profile" | "orders" | "wishlist" | "addresses" | "settings";
+
+// Validation schemas
+const emailSchema = z.string().trim().email({ message: "Введите корректный email" });
+const passwordSchema = z.string().min(6, { message: "Пароль должен содержать минимум 6 символов" });
+const nameSchema = z.string().trim().min(2, { message: "Имя должно содержать минимум 2 символа" });
 
 const Account = () => {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [activeTab, setActiveTab] = useState<TabType>("profile");
   const [isLogin, setIsLogin] = useState(true);
+  const [showPassword, setShowPassword] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  
+  // Form states
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [name, setName] = useState("");
+  
+  // Error states
+  const [emailError, setEmailError] = useState("");
+  const [passwordError, setPasswordError] = useState("");
+  const [confirmPasswordError, setConfirmPasswordError] = useState("");
+  const [nameError, setNameError] = useState("");
+  const [generalError, setGeneralError] = useState("");
 
   // Mock данные пользователя
   const user = {
@@ -28,6 +49,94 @@ const Account = () => {
     { id: "addresses" as TabType, label: "Адреса", icon: MapPin },
     { id: "settings" as TabType, label: "Настройки", icon: Settings },
   ];
+
+  const validateEmail = (value: string) => {
+    const result = emailSchema.safeParse(value);
+    if (!result.success) {
+      setEmailError(result.error.errors[0].message);
+      return false;
+    }
+    setEmailError("");
+    return true;
+  };
+
+  const validatePassword = (value: string) => {
+    const result = passwordSchema.safeParse(value);
+    if (!result.success) {
+      setPasswordError(result.error.errors[0].message);
+      return false;
+    }
+    setPasswordError("");
+    return true;
+  };
+
+  const validateName = (value: string) => {
+    const result = nameSchema.safeParse(value);
+    if (!result.success) {
+      setNameError(result.error.errors[0].message);
+      return false;
+    }
+    setNameError("");
+    return true;
+  };
+
+  const validateConfirmPassword = (value: string) => {
+    if (value !== password) {
+      setConfirmPasswordError("Пароли не совпадают");
+      return false;
+    }
+    setConfirmPasswordError("");
+    return true;
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setGeneralError("");
+
+    // Validate all fields
+    const isEmailValid = validateEmail(email);
+    const isPasswordValid = validatePassword(password);
+    let isValid = isEmailValid && isPasswordValid;
+
+    if (!isLogin) {
+      const isNameValid = validateName(name);
+      const isConfirmValid = validateConfirmPassword(confirmPassword);
+      isValid = isValid && isNameValid && isConfirmValid;
+    }
+
+    if (!isValid) return;
+
+    setIsLoading(true);
+
+    // Simulate API call
+    try {
+      await new Promise((resolve) => setTimeout(resolve, 1500));
+      
+      // For demo purposes - in real app this would be an API call
+      setIsLoggedIn(true);
+    } catch (error) {
+      setGeneralError("Произошла ошибка. Попробуйте позже.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const resetForm = () => {
+    setEmail("");
+    setPassword("");
+    setConfirmPassword("");
+    setName("");
+    setEmailError("");
+    setPasswordError("");
+    setConfirmPasswordError("");
+    setNameError("");
+    setGeneralError("");
+  };
+
+  const toggleMode = () => {
+    setIsLogin(!isLogin);
+    resetForm();
+  };
 
   if (!isLoggedIn) {
     return (
@@ -50,54 +159,137 @@ const Account = () => {
             </div>
 
             <div className="bg-card rounded-2xl border border-border p-6">
-              <form className="space-y-4">
+              {generalError && (
+                <div className="flex items-center gap-2 p-3 mb-4 bg-destructive/10 border border-destructive/20 rounded-lg text-destructive text-sm">
+                  <AlertCircle size={16} />
+                  {generalError}
+                </div>
+              )}
+
+              <form onSubmit={handleSubmit} className="space-y-4">
                 {!isLogin && (
                   <div>
                     <Label htmlFor="name">Имя</Label>
-                    <Input
-                      id="name"
-                      type="text"
-                      placeholder="Ваше имя"
-                      className="mt-1"
-                    />
+                    <div className="relative mt-1">
+                      <User className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={18} />
+                      <Input
+                        id="name"
+                        type="text"
+                        placeholder="Ваше имя"
+                        className={`pl-10 ${nameError ? "border-destructive" : ""}`}
+                        value={name}
+                        onChange={(e) => {
+                          setName(e.target.value);
+                          if (nameError) validateName(e.target.value);
+                        }}
+                        onBlur={() => name && validateName(name)}
+                      />
+                    </div>
+                    {nameError && (
+                      <p className="text-destructive text-sm mt-1">{nameError}</p>
+                    )}
                   </div>
                 )}
+                
                 <div>
                   <Label htmlFor="email">Email</Label>
-                  <Input
-                    id="email"
-                    type="email"
-                    placeholder="email@example.com"
-                    className="mt-1"
-                  />
+                  <div className="relative mt-1">
+                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={18} />
+                    <Input
+                      id="email"
+                      type="email"
+                      placeholder="email@example.com"
+                      className={`pl-10 ${emailError ? "border-destructive" : ""}`}
+                      value={email}
+                      onChange={(e) => {
+                        setEmail(e.target.value);
+                        if (emailError) validateEmail(e.target.value);
+                      }}
+                      onBlur={() => email && validateEmail(email)}
+                    />
+                  </div>
+                  {emailError && (
+                    <p className="text-destructive text-sm mt-1">{emailError}</p>
+                  )}
                 </div>
+                
                 <div>
                   <Label htmlFor="password">Пароль</Label>
-                  <Input
-                    id="password"
-                    type="password"
-                    placeholder="••••••••"
-                    className="mt-1"
-                  />
+                  <div className="relative mt-1">
+                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={18} />
+                    <Input
+                      id="password"
+                      type={showPassword ? "text" : "password"}
+                      placeholder="••••••••"
+                      className={`pl-10 pr-10 ${passwordError ? "border-destructive" : ""}`}
+                      value={password}
+                      onChange={(e) => {
+                        setPassword(e.target.value);
+                        if (passwordError) validatePassword(e.target.value);
+                      }}
+                      onBlur={() => password && validatePassword(password)}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                    >
+                      {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                    </button>
+                  </div>
+                  {passwordError && (
+                    <p className="text-destructive text-sm mt-1">{passwordError}</p>
+                  )}
                 </div>
+                
                 {!isLogin && (
                   <div>
                     <Label htmlFor="confirmPassword">Подтвердите пароль</Label>
-                    <Input
-                      id="confirmPassword"
-                      type="password"
-                      placeholder="••••••••"
-                      className="mt-1"
-                    />
+                    <div className="relative mt-1">
+                      <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={18} />
+                      <Input
+                        id="confirmPassword"
+                        type={showPassword ? "text" : "password"}
+                        placeholder="••••••••"
+                        className={`pl-10 ${confirmPasswordError ? "border-destructive" : ""}`}
+                        value={confirmPassword}
+                        onChange={(e) => {
+                          setConfirmPassword(e.target.value);
+                          if (confirmPasswordError) validateConfirmPassword(e.target.value);
+                        }}
+                        onBlur={() => confirmPassword && validateConfirmPassword(confirmPassword)}
+                      />
+                    </div>
+                    {confirmPasswordError && (
+                      <p className="text-destructive text-sm mt-1">{confirmPasswordError}</p>
+                    )}
+                  </div>
+                )}
+
+                {isLogin && (
+                  <div className="text-right">
+                    <button
+                      type="button"
+                      className="text-primary text-sm hover:underline"
+                    >
+                      Забыли пароль?
+                    </button>
                   </div>
                 )}
 
                 <Button
-                  type="button"
+                  type="submit"
                   className="w-full btn-gold py-5"
-                  onClick={() => setIsLoggedIn(true)}
+                  disabled={isLoading}
                 >
-                  {isLogin ? "Войти" : "Зарегистрироваться"}
+                  {isLoading ? (
+                    <span className="flex items-center gap-2">
+                      <span className="w-4 h-4 border-2 border-primary-foreground border-t-transparent rounded-full animate-spin" />
+                      Загрузка...
+                    </span>
+                  ) : (
+                    isLogin ? "Войти" : "Зарегистрироваться"
+                  )}
                 </Button>
               </form>
 
@@ -105,7 +297,7 @@ const Account = () => {
                 <p className="text-muted-foreground text-sm">
                   {isLogin ? "Нет аккаунта?" : "Уже есть аккаунт?"}{" "}
                   <button
-                    onClick={() => setIsLogin(!isLogin)}
+                    onClick={toggleMode}
                     className="text-primary hover:underline"
                   >
                     {isLogin ? "Зарегистрируйтесь" : "Войдите"}

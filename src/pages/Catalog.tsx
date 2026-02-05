@@ -5,99 +5,74 @@ import ProductCard from "@/components/product/ProductCard";
 import { Button } from "@/components/ui/button";
 import { motion } from "framer-motion";
 import { SlidersHorizontal, ChevronDown, X } from "lucide-react";
-
-// Mock данные - позже из БД
-const allProducts = [
-  {
-    id: "1",
-    name: "Пальто из шерсти",
-    price: 24990,
-    originalPrice: 32990,
-    image: "https://images.unsplash.com/photo-1544923246-77307dd628b1?w=500&h=700&fit=crop",
-    category: "Верхняя одежда",
-    categoryId: "outerwear",
-    isNew: true,
-  },
-  {
-    id: "2",
-    name: "Хлопковая рубашка",
-    price: 5990,
-    image: "https://images.unsplash.com/photo-1596755094514-f87e34085b2c?w=500&h=700&fit=crop",
-    category: "Рубашки",
-    categoryId: "shirts",
-  },
-  {
-    id: "3",
-    name: "Брюки чиносы",
-    price: 7990,
-    image: "https://images.unsplash.com/photo-1473966968600-fa801b869a1a?w=500&h=700&fit=crop",
-    category: "Брюки",
-    categoryId: "pants",
-  },
-  {
-    id: "4",
-    name: "Базовая футболка",
-    price: 2990,
-    image: "https://images.unsplash.com/photo-1581655353564-df123a1eb820?w=500&h=700&fit=crop",
-    category: "Футболки",
-    categoryId: "tshirts",
-    isNew: true,
-  },
-  {
-    id: "5",
-    name: "Кожаная куртка",
-    price: 34990,
-    image: "https://images.unsplash.com/photo-1551028719-00167b16eac5?w=500&h=700&fit=crop",
-    category: "Верхняя одежда",
-    categoryId: "outerwear",
-  },
-  {
-    id: "6",
-    name: "Льняная рубашка",
-    price: 6990,
-    image: "https://images.unsplash.com/photo-1602810318383-e386cc2a3ccf?w=500&h=700&fit=crop",
-    category: "Рубашки",
-    categoryId: "shirts",
-    isNew: true,
-  },
-  {
-    id: "7",
-    name: "Классические брюки",
-    price: 9990,
-    image: "https://images.unsplash.com/photo-1624378439575-d8705ad7ae80?w=500&h=700&fit=crop",
-    category: "Брюки",
-    categoryId: "pants",
-  },
-  {
-    id: "8",
-    name: "Футболка с принтом",
-    price: 3490,
-    originalPrice: 4990,
-    image: "https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=500&h=700&fit=crop",
-    category: "Футболки",
-    categoryId: "tshirts",
-  },
-];
+import { products, Product } from "@/data/products";
 
 const categories = [
   { id: "all", name: "Все" },
   { id: "new", name: "Новинки" },
+  { id: "sale", name: "Sale" },
+  { id: "tshirts", name: "Футболки" },
   { id: "outerwear", name: "Верхняя одежда" },
   { id: "shirts", name: "Рубашки" },
   { id: "pants", name: "Брюки" },
-  { id: "tshirts", name: "Футболки" },
+  { id: "jeans", name: "Джинсы" },
+  { id: "shorts", name: "Шорты" },
+  { id: "sweatshirts", name: "Свитшоты" },
+  { id: "polo", name: "Поло" },
+  { id: "shoes", name: "Обувь" },
+  { id: "suits", name: "Костюмы" },
+  { id: "accessories", name: "Аксессуары" },
+  { id: "caps", name: "Кепки" },
+];
+
+const seasons = [
+  { id: "all", name: "Все сезоны" },
+  { id: "spring", name: "Весна" },
+  { id: "summer", name: "Лето" },
+  { id: "autumn", name: "Осень" },
+  { id: "winter", name: "Зима" },
 ];
 
 const Catalog = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const [isFilterOpen, setIsFilterOpen] = useState(false);
+  const [priceFrom, setPriceFrom] = useState("");
+  const [priceTo, setPriceTo] = useState("");
+  const [selectedSizes, setSelectedSizes] = useState<string[]>([]);
+  const [selectedSeason, setSelectedSeason] = useState("all");
   
   const selectedCategory = searchParams.get("category") || "all";
 
-  const filteredProducts = allProducts.filter((product) => {
-    if (selectedCategory === "all") return true;
-    if (selectedCategory === "new") return product.isNew;
-    return product.categoryId === selectedCategory;
+  const filteredProducts = products.filter((product) => {
+    // Category filter
+    if (selectedCategory !== "all") {
+      if (selectedCategory === "new") {
+        if (!product.isNew) return false;
+      } else if (selectedCategory === "sale") {
+        if (!product.isSale) return false;
+      } else if (product.category !== selectedCategory && product.subcategory !== selectedCategory) {
+        return false;
+      }
+    }
+
+    // Price filter
+    if (priceFrom && product.price < parseInt(priceFrom)) return false;
+    if (priceTo && product.price > parseInt(priceTo)) return false;
+
+    // Size filter
+    if (selectedSizes.length > 0) {
+      const hasSize = product.sizes.some(
+        (s) => selectedSizes.includes(s.name) && s.available
+      );
+      if (!hasSize) return false;
+    }
+
+    // Season filter
+    if (selectedSeason !== "all" && product.season !== selectedSeason && product.season !== "all") {
+      return false;
+    }
+
+    return true;
   });
 
   const handleCategoryChange = (categoryId: string) => {
@@ -108,6 +83,21 @@ const Catalog = () => {
     }
     setSearchParams(searchParams);
   };
+
+  const toggleSize = (size: string) => {
+    setSelectedSizes((prev) =>
+      prev.includes(size) ? prev.filter((s) => s !== size) : [...prev, size]
+    );
+  };
+
+  const clearFilters = () => {
+    setPriceFrom("");
+    setPriceTo("");
+    setSelectedSizes([]);
+    setSelectedSeason("all");
+  };
+
+  const allSizes = ["XS", "S", "M", "L", "XL", "XXL", "28", "30", "32", "34", "36", "40", "41", "42", "43", "44", "45"];
 
   return (
     <Layout>
@@ -126,13 +116,13 @@ const Catalog = () => {
 
         {/* Filters Bar */}
         <div className="flex flex-wrap items-center gap-4 mb-8">
-          {/* Category pills */}
-          <div className="flex flex-wrap gap-2">
+          {/* Category pills - scrollable on mobile */}
+          <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide w-full md:w-auto">
             {categories.map((category) => (
               <button
                 key={category.id}
                 onClick={() => handleCategoryChange(category.id)}
-                className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${
+                className={`px-4 py-2 rounded-full text-sm font-medium transition-all whitespace-nowrap ${
                   selectedCategory === category.id
                     ? "bg-primary text-primary-foreground"
                     : "bg-secondary text-foreground hover:bg-muted"
@@ -163,25 +153,37 @@ const Catalog = () => {
           >
             <div className="flex items-center justify-between mb-4">
               <h3 className="font-semibold">Фильтры</h3>
-              <button
-                onClick={() => setIsFilterOpen(false)}
-                className="text-muted-foreground hover:text-foreground"
-              >
-                <X size={20} />
-              </button>
+              <div className="flex items-center gap-4">
+                <button
+                  onClick={clearFilters}
+                  className="text-primary text-sm hover:underline"
+                >
+                  Сбросить
+                </button>
+                <button
+                  onClick={() => setIsFilterOpen(false)}
+                  className="text-muted-foreground hover:text-foreground"
+                >
+                  <X size={20} />
+                </button>
+              </div>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
               <div>
                 <label className="block text-sm font-medium mb-2">Цена</label>
                 <div className="flex gap-2">
                   <input
                     type="number"
                     placeholder="От"
+                    value={priceFrom}
+                    onChange={(e) => setPriceFrom(e.target.value)}
                     className="w-full px-3 py-2 bg-secondary border border-border rounded-lg text-sm"
                   />
                   <input
                     type="number"
                     placeholder="До"
+                    value={priceTo}
+                    onChange={(e) => setPriceTo(e.target.value)}
                     className="w-full px-3 py-2 bg-secondary border border-border rounded-lg text-sm"
                   />
                 </div>
@@ -192,9 +194,32 @@ const Catalog = () => {
                   {["XS", "S", "M", "L", "XL", "XXL"].map((size) => (
                     <button
                       key={size}
-                      className="px-3 py-1 bg-secondary border border-border rounded-lg text-sm hover:border-primary transition-colors"
+                      onClick={() => toggleSize(size)}
+                      className={`px-3 py-1 border rounded-lg text-sm transition-colors ${
+                        selectedSizes.includes(size)
+                          ? "bg-primary border-primary text-primary-foreground"
+                          : "bg-secondary border-border hover:border-primary"
+                      }`}
                     >
                       {size}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-2">Сезон</label>
+                <div className="flex flex-wrap gap-2">
+                  {seasons.map((season) => (
+                    <button
+                      key={season.id}
+                      onClick={() => setSelectedSeason(season.id)}
+                      className={`px-3 py-1 border rounded-lg text-sm transition-colors ${
+                        selectedSeason === season.id
+                          ? "bg-primary border-primary text-primary-foreground"
+                          : "bg-secondary border-border hover:border-primary"
+                      }`}
+                    >
+                      {season.name}
                     </button>
                   ))}
                 </div>
@@ -217,7 +242,7 @@ const Catalog = () => {
               key={product.id}
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: index * 0.05 }}
+              transition={{ delay: index * 0.02 }}
             >
               <ProductCard product={product} />
             </motion.div>
@@ -226,9 +251,12 @@ const Catalog = () => {
 
         {filteredProducts.length === 0 && (
           <div className="text-center py-16">
-            <p className="text-muted-foreground text-lg">
+            <p className="text-muted-foreground text-lg mb-4">
               Товары не найдены
             </p>
+            <Button onClick={clearFilters} className="btn-gold">
+              Сбросить фильтры
+            </Button>
           </div>
         )}
       </div>
