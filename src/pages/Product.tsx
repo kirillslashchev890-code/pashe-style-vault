@@ -2,41 +2,26 @@ import { useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import Layout from "@/components/layout/Layout";
 import { Button } from "@/components/ui/button";
-import { motion } from "framer-motion";
-import { Heart, ShoppingBag, Minus, Plus, ChevronLeft, Truck, RefreshCw, Shield } from "lucide-react";
-
-// Mock данные
-const productData = {
-  id: "1",
-  name: "Пальто из шерсти",
-  price: 24990,
-  originalPrice: 32990,
-  description: "Классическое мужское пальто из высококачественной шерсти. Идеально подходит для холодной погоды, сохраняя элегантный внешний вид. Застёжка на пуговицы, два боковых кармана, внутренний карман.",
-  images: [
-    "https://images.unsplash.com/photo-1544923246-77307dd628b1?w=800&h=1000&fit=crop",
-    "https://images.unsplash.com/photo-1551028719-00167b16eac5?w=800&h=1000&fit=crop",
-    "https://images.unsplash.com/photo-1539533018447-63fcce2678e3?w=800&h=1000&fit=crop",
-  ],
-  category: "Верхняя одежда",
-  sizes: [
-    { name: "S", available: true },
-    { name: "M", available: true },
-    { name: "L", available: true },
-    { name: "XL", available: false },
-    { name: "XXL", available: true },
-  ],
-  colors: ["Чёрный", "Серый", "Тёмно-синий"],
-  composition: "80% шерсть, 20% полиэстер",
-  care: "Сухая чистка",
-};
+import { motion, AnimatePresence } from "framer-motion";
+import { Heart, ShoppingBag, Minus, Plus, ChevronLeft, Truck, RefreshCw, Shield, ChevronDown } from "lucide-react";
+import { getProductById, products } from "@/data/products";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 
 const Product = () => {
   const { id } = useParams();
   const [selectedImage, setSelectedImage] = useState(0);
   const [selectedSize, setSelectedSize] = useState<string | null>(null);
   const [quantity, setQuantity] = useState(1);
+  const [compositionOpen, setCompositionOpen] = useState(false);
+  const [careOpen, setCareOpen] = useState(false);
+  const [deliveryOpen, setDeliveryOpen] = useState(false);
 
-  const product = productData; // В реальности загрузка по id
+  // Find product by ID or use first product as fallback
+  const product = getProductById(id || "") || products[0];
 
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat("ru-RU", {
@@ -80,6 +65,11 @@ const Product = () => {
                   -{discount}%
                 </span>
               )}
+              {product.isNew && (
+                <span className="absolute top-4 right-4 bg-primary text-primary-foreground text-sm font-semibold px-3 py-1 rounded-full">
+                  NEW
+                </span>
+              )}
             </div>
             <div className="flex gap-4">
               {product.images.map((image, index) => (
@@ -108,7 +98,11 @@ const Product = () => {
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.5, delay: 0.1 }}
           >
-            <p className="text-primary text-sm font-medium mb-2">{product.category}</p>
+            <div className="flex items-center gap-2 mb-2">
+              <p className="text-primary text-sm font-medium">{product.brand}</p>
+              <span className="text-muted-foreground">•</span>
+              <p className="text-muted-foreground text-sm">{product.category}</p>
+            </div>
             <h1 className="text-3xl md:text-4xl font-bold mb-4">{product.name}</h1>
             
             <div className="flex items-center gap-4 mb-6">
@@ -121,6 +115,21 @@ const Product = () => {
             </div>
 
             <p className="text-muted-foreground mb-8">{product.description}</p>
+
+            {/* Colors */}
+            <div className="mb-6">
+              <span className="font-medium block mb-3">Цвет: {product.colors[0]}</span>
+              <div className="flex gap-2">
+                {product.colors.map((color) => (
+                  <button
+                    key={color}
+                    className="px-4 py-2 rounded-lg border border-border hover:border-primary text-sm transition-colors"
+                  >
+                    {color}
+                  </button>
+                ))}
+              </div>
+            </div>
 
             {/* Sizes */}
             <div className="mb-6">
@@ -219,19 +228,121 @@ const Product = () => {
               </div>
             </div>
 
-            {/* Details */}
-            <div className="border-t border-border mt-8 pt-8">
-              <h3 className="font-semibold mb-4">Детали</h3>
-              <dl className="space-y-2 text-sm">
-                <div className="flex">
-                  <dt className="text-muted-foreground w-32">Состав</dt>
-                  <dd>{product.composition}</dd>
-                </div>
-                <div className="flex">
-                  <dt className="text-muted-foreground w-32">Уход</dt>
-                  <dd>{product.care}</dd>
-                </div>
-              </dl>
+            {/* Collapsible Details */}
+            <div className="border-t border-border mt-8 pt-8 space-y-4">
+              {/* Composition */}
+              <Collapsible open={compositionOpen} onOpenChange={setCompositionOpen}>
+                <CollapsibleTrigger className="w-full flex items-center justify-between py-3 hover:text-primary transition-colors">
+                  <span className="font-semibold">Состав</span>
+                  <ChevronDown 
+                    size={20} 
+                    className={`transition-transform duration-200 ${compositionOpen ? "rotate-180" : ""}`} 
+                  />
+                </CollapsibleTrigger>
+                <CollapsibleContent>
+                  <AnimatePresence>
+                    <motion.div
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: "auto" }}
+                      exit={{ opacity: 0, height: 0 }}
+                      className="pb-4"
+                    >
+                      <dl className="space-y-2 text-sm">
+                        <div className="flex">
+                          <dt className="text-muted-foreground w-40">Материал</dt>
+                          <dd>{product.composition}</dd>
+                        </div>
+                        <div className="flex">
+                          <dt className="text-muted-foreground w-40">Страна производства</dt>
+                          <dd>{product.country}</dd>
+                        </div>
+                      </dl>
+                    </motion.div>
+                  </AnimatePresence>
+                </CollapsibleContent>
+              </Collapsible>
+
+              {/* Care Instructions */}
+              <Collapsible open={careOpen} onOpenChange={setCareOpen}>
+                <CollapsibleTrigger className="w-full flex items-center justify-between py-3 hover:text-primary transition-colors border-t border-border">
+                  <span className="font-semibold">Уход за изделием</span>
+                  <ChevronDown 
+                    size={20} 
+                    className={`transition-transform duration-200 ${careOpen ? "rotate-180" : ""}`} 
+                  />
+                </CollapsibleTrigger>
+                <CollapsibleContent>
+                  <AnimatePresence>
+                    <motion.div
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: "auto" }}
+                      exit={{ opacity: 0, height: 0 }}
+                      className="pb-4"
+                    >
+                      <p className="text-sm text-muted-foreground">{product.care}</p>
+                      <ul className="mt-3 space-y-2 text-sm">
+                        <li className="flex items-center gap-2">
+                          <span className="w-2 h-2 bg-primary rounded-full" />
+                          Стирать при температуре не выше указанной
+                        </li>
+                        <li className="flex items-center gap-2">
+                          <span className="w-2 h-2 bg-primary rounded-full" />
+                          Не отбеливать
+                        </li>
+                        <li className="flex items-center gap-2">
+                          <span className="w-2 h-2 bg-primary rounded-full" />
+                          Гладить при средней температуре
+                        </li>
+                        <li className="flex items-center gap-2">
+                          <span className="w-2 h-2 bg-primary rounded-full" />
+                          Не сушить в барабане
+                        </li>
+                      </ul>
+                    </motion.div>
+                  </AnimatePresence>
+                </CollapsibleContent>
+              </Collapsible>
+
+              {/* Delivery */}
+              <Collapsible open={deliveryOpen} onOpenChange={setDeliveryOpen}>
+                <CollapsibleTrigger className="w-full flex items-center justify-between py-3 hover:text-primary transition-colors border-t border-border">
+                  <span className="font-semibold">Доставка и возврат</span>
+                  <ChevronDown 
+                    size={20} 
+                    className={`transition-transform duration-200 ${deliveryOpen ? "rotate-180" : ""}`} 
+                  />
+                </CollapsibleTrigger>
+                <CollapsibleContent>
+                  <AnimatePresence>
+                    <motion.div
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: "auto" }}
+                      exit={{ opacity: 0, height: 0 }}
+                      className="pb-4"
+                    >
+                      <div className="space-y-4 text-sm">
+                        <div>
+                          <p className="font-medium mb-1">Доставка</p>
+                          <ul className="space-y-1 text-muted-foreground">
+                            <li>• Курьером по Москве: 1-2 дня</li>
+                            <li>• В пункты выдачи: 2-5 дней</li>
+                            <li>• Почтой России: 5-14 дней</li>
+                            <li>• Бесплатная доставка при заказе от 10 000 ₽</li>
+                          </ul>
+                        </div>
+                        <div>
+                          <p className="font-medium mb-1">Возврат</p>
+                          <ul className="space-y-1 text-muted-foreground">
+                            <li>• Возврат в течение 30 дней</li>
+                            <li>• Товар должен сохранить товарный вид</li>
+                            <li>• Бесплатный возврат курьером</li>
+                          </ul>
+                        </div>
+                      </div>
+                    </motion.div>
+                  </AnimatePresence>
+                </CollapsibleContent>
+              </Collapsible>
             </div>
           </motion.div>
         </div>

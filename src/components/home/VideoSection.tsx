@@ -40,8 +40,15 @@ const VideoSection = () => {
                   viewport={{ once: true }}
                   transition={{ delay: 0.4, duration: 0.5 }}
                   className="text-3xl md:text-5xl lg:text-6xl font-bold text-foreground mb-4"
+                  style={{ 
+                    fontFamily: "'Outfit', sans-serif",
+                    fontWeight: 700,
+                    letterSpacing: "-0.02em",
+                  }}
                 >
-                  Весна / Лето 2025
+                  <span className="text-gradient-gold">Весна / Лето</span>
+                  <br />
+                  <span className="text-foreground">2025</span>
                 </motion.h2>
                 
                 <motion.p
@@ -50,6 +57,11 @@ const VideoSection = () => {
                   viewport={{ once: true }}
                   transition={{ delay: 0.5, duration: 0.5 }}
                   className="text-muted-foreground text-lg md:text-xl max-w-lg mx-auto mb-8"
+                  style={{
+                    fontFamily: "'Outfit', sans-serif",
+                    fontWeight: 300,
+                    letterSpacing: "0.05em",
+                  }}
                 >
                   Современная классика для городского стиля
                 </motion.p>
