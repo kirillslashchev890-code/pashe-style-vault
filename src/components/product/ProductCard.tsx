@@ -1,12 +1,18 @@
+import { useState } from "react";
 import { Link } from "react-router-dom";
 import { Heart } from "lucide-react";
 import { Product } from "@/data/products";
+import AuthModal from "@/components/auth/AuthModal";
 
 interface ProductCardProps {
   product: Product;
 }
 
 const ProductCard = ({ product }: ProductCardProps) => {
+  const [authModalOpen, setAuthModalOpen] = useState(false);
+  // TODO: Заменить на реальную проверку авторизации
+  const [isLoggedIn] = useState(false);
+
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat("ru-RU", {
       style: "currency",
@@ -46,7 +52,12 @@ const ProductCard = ({ product }: ProductCardProps) => {
         <button
           onClick={(e) => {
             e.preventDefault();
-            // Add to wishlist logic
+            if (!isLoggedIn) {
+              setAuthModalOpen(true);
+              return;
+            }
+            // TODO: Добавить логику добавления в избранное
+            console.log("Добавлено в избранное:", product.id);
           }}
           className="absolute top-3 right-3 w-9 h-9 rounded-full bg-background/80 backdrop-blur-sm flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-primary hover:text-primary-foreground"
         >
@@ -84,6 +95,12 @@ const ProductCard = ({ product }: ProductCardProps) => {
           )}
         </div>
       </div>
+      
+      {/* Auth Modal */}
+      <AuthModal
+        isOpen={authModalOpen}
+        onClose={() => setAuthModalOpen(false)}
+      />
     </Link>
   );
 };

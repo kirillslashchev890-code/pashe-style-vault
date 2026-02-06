@@ -3,9 +3,11 @@ import { Link } from "react-router-dom";
 import { ShoppingBag, User, Menu, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import CategoryDrawer from "./CategoryDrawer";
+import SearchModal from "./SearchModal";
 
 const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
 
   return (
     <>
@@ -21,12 +23,18 @@ const Header = () => {
               >
                 <Menu size={24} />
               </button>
-              <Button variant="ghost" size="icon" className="text-foreground/80 hover:text-primary">
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                className="text-foreground/80 hover:text-primary"
+                onClick={() => setIsSearchOpen(true)}
+              >
                 <Search size={20} />
               </Button>
             </div>
 
             {/* Center - Logo */}
+            {/* 🏷️ ЗАМЕНИТЕ НАЗВАНИЕ МАГАЗИНА НА СВОЁ */}
             <Link to="/" className="absolute left-1/2 -translate-x-1/2">
               <span className="text-2xl md:text-3xl font-bold tracking-wider text-gradient-gold">
                 PASHE
@@ -44,6 +52,7 @@ const Header = () => {
                 <Button variant="ghost" size="icon" className="text-foreground/80 hover:text-primary">
                   <ShoppingBag size={20} />
                 </Button>
+                {/* Счётчик корзины - обновляется динамически */}
                 <span className="absolute -top-1 -right-1 w-5 h-5 bg-primary text-primary-foreground text-xs font-semibold rounded-full flex items-center justify-center">
                   0
                 </span>
@@ -55,6 +64,9 @@ const Header = () => {
 
       {/* Category Drawer */}
       <CategoryDrawer isOpen={isMenuOpen} onClose={() => setIsMenuOpen(false)} />
+
+      {/* Search Modal */}
+      <SearchModal isOpen={isSearchOpen} onClose={() => setIsSearchOpen(false)} />
     </>
   );
 };
