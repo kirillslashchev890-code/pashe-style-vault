@@ -1,0 +1,367 @@
+import { useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { X, Mail, Lock, User, Eye, EyeOff, AlertCircle, ArrowLeft } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { z } from "zod";
+
+interface AuthModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  onSuccess?: () => void;
+}
+
+// Validation schemas
+const emailSchema = z.string().trim().email({ message: "Введите корректный email" });
+const passwordSchema = z.string().min(6, { message: "Пароль должен содержать минимум 6 символов" });
+const nameSchema = z.string().trim().min(2, { message: "Имя должно содержать минимум 2 символа" });
+
+type AuthMode = "login" | "register" | "forgot";
+
+const AuthModal = ({ isOpen, onClose, onSuccess }: AuthModalProps) => {
+  const [mode, setMode] = useState<AuthMode>("login");
+  const [showPassword, setShowPassword] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [successMessage, setSuccessMessage] = useState("");
+  
+  // Form states
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [name, setName] = useState("");
+  
+  // Error states
+  const [emailError, setEmailError] = useState("");
+  const [passwordError, setPasswordError] = useState("");
+  const [confirmPasswordError, setConfirmPasswordError] = useState("");
+  const [nameError, setNameError] = useState("");
+  const [generalError, setGeneralError] = useState("");
+
+  const validateEmail = (value: string) => {
+    const result = emailSchema.safeParse(value);
+    if (!result.success) {
+      setEmailError(result.error.errors[0].message);
+      return false;
+    }
+    setEmailError("");
+    return true;
+  };
+
+  const validatePassword = (value: string) => {
+    const result = passwordSchema.safeParse(value);
+    if (!result.success) {
+      setPasswordError(result.error.errors[0].message);
+      return false;
+    }
+    setPasswordError("");
+    return true;
+  };
+
+  const validateName = (value: string) => {
+    const result = nameSchema.safeParse(value);
+    if (!result.success) {
+      setNameError(result.error.errors[0].message);
+      return false;
+    }
+    setNameError("");
+    return true;
+  };
+
+  const validateConfirmPassword = (value: string) => {
+    if (value !== password) {
+      setConfirmPasswordError("Пароли не совпадают");
+      return false;
+    }
+    setConfirmPasswordError("");
+    return true;
+  };
+
+  const resetForm = () => {
+    setEmail("");
+    setPassword("");
+    setConfirmPassword("");
+    setName("");
+    setEmailError("");
+    setPasswordError("");
+    setConfirmPasswordError("");
+    setNameError("");
+    setGeneralError("");
+    setSuccessMessage("");
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setGeneralError("");
+    setSuccessMessage("");
+
+    if (mode === "forgot") {
+      const isEmailValid = validateEmail(email);
+      if (!isEmailValid) return;
+
+      setIsLoading(true);
+      try {
+        // Симуляция отправки письма
+        await new Promise((resolve) => setTimeout(resolve, 1500));
+        setSuccessMessage("Инструкции по восстановлению пароля отправлены на вашу почту");
+        setTimeout(() => {
+          setMode("login");
+          resetForm();
+        }, 3000);
+      } catch (error) {
+        setGeneralError("Произошла ошибка. Попробуйте позже.");
+      } finally {
+        setIsLoading(false);
+      }
+      return;
+    }
+
+    // Validate all fields
+    const isEmailValid = validateEmail(email);
+    const isPasswordValid = validatePassword(password);
+    let isValid = isEmailValid && isPasswordValid;
+
+    if (mode === "register") {
+      const isNameValid = validateName(name);
+      const isConfirmValid = validateConfirmPassword(confirmPassword);
+      isValid = isValid && isNameValid && isConfirmValid;
+    }
+
+    if (!isValid) return;
+
+    setIsLoading(true);
+
+    try {
+      await new Promise((resolve) => setTimeout(resolve, 1500));
+      // Успешная авторизация
+      onSuccess?.();
+      onClose();
+    } catch (error) {
+      setGeneralError("Произошла ошибка. Попробуйте позже.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const switchMode = (newMode: AuthMode) => {
+    resetForm();
+    setMode(newMode);
+  };
+
+  if (!isOpen) return null;
+
+  return (
+    <AnimatePresence>
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/80 backdrop-blur-sm"
+        onClick={onClose}
+      >
+        <motion.div
+          initial={{ scale: 0.95, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          exit={{ scale: 0.95, opacity: 0 }}
+          onClick={(e) => e.stopPropagation()}
+          className="bg-card rounded-2xl border border-border p-6 w-full max-w-md shadow-xl"
+        >
+          {/* Header */}
+          <div className="flex items-center justify-between mb-6">
+            {mode === "forgot" ? (
+              <button
+                onClick={() => switchMode("login")}
+                className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors"
+              >
+                <ArrowLeft size={18} />
+                Назад
+              </button>
+            ) : (
+              <h2 className="text-xl font-semibold">
+                {mode === "login" ? "Вход в аккаунт" : "Регистрация"}
+              </h2>
+            )}
+            <button
+              onClick={onClose}
+              className="text-muted-foreground hover:text-foreground transition-colors"
+            >
+              <X size={20} />
+            </button>
+          </div>
+
+          {mode === "forgot" && (
+            <div className="mb-6">
+              <h2 className="text-xl font-semibold mb-2">Восстановление пароля</h2>
+              <p className="text-muted-foreground text-sm">
+                Введите email, указанный при регистрации. Мы отправим вам инструкции по восстановлению пароля.
+              </p>
+            </div>
+          )}
+
+          {successMessage && (
+            <div className="flex items-center gap-2 p-3 mb-4 bg-primary/10 border border-primary/20 rounded-lg text-primary text-sm">
+              {successMessage}
+            </div>
+          )}
+
+          {generalError && (
+            <div className="flex items-center gap-2 p-3 mb-4 bg-destructive/10 border border-destructive/20 rounded-lg text-destructive text-sm">
+              <AlertCircle size={16} />
+              {generalError}
+            </div>
+          )}
+
+          <form onSubmit={handleSubmit} className="space-y-4">
+            {mode === "register" && (
+              <div>
+                <Label htmlFor="name">Имя</Label>
+                <div className="relative mt-1.5">
+                  <User className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" size={18} />
+                  <Input
+                    id="name"
+                    type="text"
+                    placeholder="Ваше имя"
+                    className={`pl-10 h-12 ${nameError ? "border-destructive" : ""}`}
+                    value={name}
+                    onChange={(e) => {
+                      setName(e.target.value);
+                      if (nameError) validateName(e.target.value);
+                    }}
+                    onBlur={() => name && validateName(name)}
+                  />
+                </div>
+                {nameError && (
+                  <p className="text-destructive text-sm mt-1">{nameError}</p>
+                )}
+              </div>
+            )}
+            
+            <div>
+              <Label htmlFor="email">Email</Label>
+              <div className="relative mt-1.5">
+                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" size={18} />
+                <Input
+                  id="email"
+                  type="email"
+                  placeholder="email@example.com"
+                  className={`pl-10 h-12 ${emailError ? "border-destructive" : ""}`}
+                  value={email}
+                  onChange={(e) => {
+                    setEmail(e.target.value);
+                    if (emailError) validateEmail(e.target.value);
+                  }}
+                  onBlur={() => email && validateEmail(email)}
+                />
+              </div>
+              {emailError && (
+                <p className="text-destructive text-sm mt-1">{emailError}</p>
+              )}
+            </div>
+            
+            {mode !== "forgot" && (
+              <div>
+                <Label htmlFor="password">Пароль</Label>
+                <div className="relative mt-1.5">
+                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" size={18} />
+                  <Input
+                    id="password"
+                    type={showPassword ? "text" : "password"}
+                    placeholder="••••••••"
+                    className={`pl-10 pr-10 h-12 ${passwordError ? "border-destructive" : ""}`}
+                    value={password}
+                    onChange={(e) => {
+                      setPassword(e.target.value);
+                      if (passwordError) validatePassword(e.target.value);
+                    }}
+                    onBlur={() => password && validatePassword(password)}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                  >
+                    {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                  </button>
+                </div>
+                {passwordError && (
+                  <p className="text-destructive text-sm mt-1">{passwordError}</p>
+                )}
+              </div>
+            )}
+            
+            {mode === "register" && (
+              <div>
+                <Label htmlFor="confirmPassword">Подтвердите пароль</Label>
+                <div className="relative mt-1.5">
+                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" size={18} />
+                  <Input
+                    id="confirmPassword"
+                    type={showPassword ? "text" : "password"}
+                    placeholder="••••••••"
+                    className={`pl-10 h-12 ${confirmPasswordError ? "border-destructive" : ""}`}
+                    value={confirmPassword}
+                    onChange={(e) => {
+                      setConfirmPassword(e.target.value);
+                      if (confirmPasswordError) validateConfirmPassword(e.target.value);
+                    }}
+                    onBlur={() => confirmPassword && validateConfirmPassword(confirmPassword)}
+                  />
+                </div>
+                {confirmPasswordError && (
+                  <p className="text-destructive text-sm mt-1">{confirmPasswordError}</p>
+                )}
+              </div>
+            )}
+
+            {mode === "login" && (
+              <div className="text-right">
+                <button
+                  type="button"
+                  onClick={() => switchMode("forgot")}
+                  className="text-primary text-sm hover:underline"
+                >
+                  Забыли пароль?
+                </button>
+              </div>
+            )}
+
+            <Button
+              type="submit"
+              className="w-full btn-gold h-12"
+              disabled={isLoading}
+            >
+              {isLoading ? (
+                <span className="flex items-center gap-2">
+                  <span className="w-4 h-4 border-2 border-primary-foreground border-t-transparent rounded-full animate-spin" />
+                  Загрузка...
+                </span>
+              ) : mode === "forgot" ? (
+                "Отправить инструкции"
+              ) : mode === "login" ? (
+                "Войти"
+              ) : (
+                "Зарегистрироваться"
+              )}
+            </Button>
+          </form>
+
+          {mode !== "forgot" && (
+            <div className="mt-6 text-center">
+              <p className="text-muted-foreground text-sm">
+                {mode === "login" ? "Нет аккаунта?" : "Уже есть аккаунт?"}{" "}
+                <button
+                  onClick={() => switchMode(mode === "login" ? "register" : "login")}
+                  className="text-primary hover:underline"
+                >
+                  {mode === "login" ? "Зарегистрируйтесь" : "Войдите"}
+                </button>
+              </p>
+            </div>
+          )}
+        </motion.div>
+      </motion.div>
+    </AnimatePresence>
+  );
+};
+
+export default AuthModal;

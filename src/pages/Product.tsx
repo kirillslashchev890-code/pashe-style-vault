@@ -10,15 +10,23 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
+import ImageLightbox from "@/components/product/ImageLightbox";
+import AuthModal from "@/components/auth/AuthModal";
 
 const Product = () => {
   const { id } = useParams();
   const [selectedImage, setSelectedImage] = useState(0);
   const [selectedSize, setSelectedSize] = useState<string | null>(null);
+  const [selectedColor, setSelectedColor] = useState<string | null>(null);
   const [quantity, setQuantity] = useState(1);
   const [compositionOpen, setCompositionOpen] = useState(false);
   const [careOpen, setCareOpen] = useState(false);
   const [deliveryOpen, setDeliveryOpen] = useState(false);
+  const [lightboxOpen, setLightboxOpen] = useState(false);
+  const [authModalOpen, setAuthModalOpen] = useState(false);
+  
+  // TODO: Заменить на реальную проверку авторизации
+  const [isLoggedIn] = useState(false);
 
   // Find product by ID or use first product as fallback
   const product = getProductById(id || "") || products[0];
@@ -54,11 +62,14 @@ const Product = () => {
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.5 }}
           >
-            <div className="relative aspect-[3/4] rounded-2xl overflow-hidden bg-secondary mb-4">
+            <div 
+              className="relative aspect-[3/4] rounded-2xl overflow-hidden bg-secondary mb-4 cursor-zoom-in"
+              onClick={() => setLightboxOpen(true)}
+            >
               <img
                 src={product.images[selectedImage]}
                 alt={product.name}
-                className="absolute inset-0 w-full h-full object-cover"
+                className="absolute inset-0 w-full h-full object-cover hover:scale-105 transition-transform duration-300"
               />
               {discount && (
                 <span className="absolute top-4 left-4 bg-destructive text-destructive-foreground text-sm font-semibold px-3 py-1 rounded-full">
@@ -70,6 +81,9 @@ const Product = () => {
                   NEW
                 </span>
               )}
+              <div className="absolute inset-0 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity bg-background/20">
+                <span className="bg-background/80 px-3 py-1.5 rounded-full text-sm">Нажмите для увеличения</span>
+              </div>
             </div>
             <div className="flex gap-4">
               {product.images.map((image, index) => (
@@ -118,14 +132,25 @@ const Product = () => {
 
             {/* Colors */}
             <div className="mb-6">
-              <span className="font-medium block mb-3">Цвет: {product.colors[0]}</span>
-              <div className="flex gap-2">
+              <span className="font-medium block mb-3">
+                Цвет: {selectedColor || product.colors[0]?.name || "Выберите цвет"}
+              </span>
+              <div className="flex gap-2 flex-wrap">
                 {product.colors.map((color) => (
                   <button
-                    key={color}
-                    className="px-4 py-2 rounded-lg border border-border hover:border-primary text-sm transition-colors"
+                    key={color.name}
+                    onClick={() => setSelectedColor(color.name)}
+                    className={`flex items-center gap-2 px-4 py-2 rounded-lg border text-sm transition-colors ${
+                      selectedColor === color.name
+                        ? "border-primary bg-primary/10"
+                        : "border-border hover:border-primary"
+                    }`}
                   >
-                    {color}
+                    <span
+                      className="w-4 h-4 rounded-full border border-border"
+                      style={{ backgroundColor: color.hex }}
+                    />
+                    {color.name}
                   </button>
                 ))}
               </div>
@@ -190,6 +215,14 @@ const Product = () => {
                 size="lg"
                 className="flex-1 btn-gold py-6"
                 disabled={!selectedSize}
+                onClick={() => {
+                  if (!isLoggedIn) {
+                    setAuthModalOpen(true);
+                    return;
+                  }
+                  // TODO: Добавить логику добавления в корзину
+                  console.log("Добавлено в корзину:", product.id, selectedSize, selectedColor);
+                }}
               >
                 <ShoppingBag size={20} className="mr-2" />
                 {selectedSize ? "Добавить в корзину" : "Выберите размер"}
@@ -198,6 +231,14 @@ const Product = () => {
                 size="lg"
                 variant="outline"
                 className="w-14 h-14 p-0"
+                onClick={() => {
+                  if (!isLoggedIn) {
+                    setAuthModalOpen(true);
+                    return;
+                  }
+                  // TODO: Добавить логику добавления в избранное
+                  console.log("Добавлено в избранное:", product.id);
+                }}
               >
                 <Heart size={20} />
               </Button>
@@ -347,6 +388,24 @@ const Product = () => {
           </motion.div>
         </div>
       </div>
+
+      {/* Image Lightbox */}
+      <ImageLightbox
+        images={product.images}
+        initialIndex={selectedImage}
+        isOpen={lightboxOpen}
+        onClose={() => setLightboxOpen(false)}
+      />
+
+      {/* Auth Modal */}
+      <AuthModal
+        isOpen={authModalOpen}
+        onClose={() => setAuthModalOpen(false)}
+        onSuccess={() => {
+          // После успешной авторизации
+          setAuthModalOpen(false);
+        }}
+      />
     </Layout>
   );
 };

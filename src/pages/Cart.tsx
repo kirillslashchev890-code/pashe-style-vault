@@ -5,28 +5,24 @@ import { Button } from "@/components/ui/button";
 import { motion } from "framer-motion";
 import { Trash2, Minus, Plus, ShoppingBag, ArrowRight } from "lucide-react";
 
-// Mock данные корзины
-const initialCartItems = [
-  {
-    id: "1",
-    name: "Пальто из шерсти",
-    price: 24990,
-    image: "https://images.unsplash.com/photo-1544923246-77307dd628b1?w=200&h=250&fit=crop",
-    size: "M",
-    quantity: 1,
-  },
-  {
-    id: "2",
-    name: "Хлопковая рубашка",
-    price: 5990,
-    image: "https://images.unsplash.com/photo-1596755094514-f87e34085b2c?w=200&h=250&fit=crop",
-    size: "L",
-    quantity: 2,
-  },
-];
+// ============================================
+// 🛒 КОРЗИНА - ПУСТАЯ ПО УМОЛЧАНИЮ
+// Товары добавляются только после авторизации
+// ============================================
+
+export interface CartItem {
+  id: string;
+  name: string;
+  price: number;
+  image: string;
+  size: string;
+  color?: string;
+  quantity: number;
+}
 
 const Cart = () => {
-  const [cartItems, setCartItems] = useState(initialCartItems);
+  // Корзина пуста по умолчанию - товары добавляются через контекст/стейт
+  const [cartItems, setCartItems] = useState<CartItem[]>([]);
 
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat("ru-RU", {
@@ -56,6 +52,7 @@ const Cart = () => {
   const shipping = subtotal >= 10000 ? 0 : 500;
   const total = subtotal + shipping;
 
+  // Пустая корзина
   if (cartItems.length === 0) {
     return (
       <Layout>
@@ -121,6 +118,7 @@ const Cart = () => {
                   </Link>
                   <p className="text-muted-foreground text-sm mt-1">
                     Размер: {item.size}
+                    {item.color && ` • Цвет: ${item.color}`}
                   </p>
                   <p className="font-semibold mt-2">{formatPrice(item.price)}</p>
                   

@@ -5,10 +5,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { motion } from "framer-motion";
-import { User, Package, Heart, LogOut, Settings, MapPin, Mail, Lock, Eye, EyeOff, AlertCircle } from "lucide-react";
+import { User, Package, Heart, LogOut, Settings, MapPin, Mail, Lock, Eye, EyeOff, AlertCircle, ArrowLeft } from "lucide-react";
 import { z } from "zod";
 
 type TabType = "profile" | "orders" | "wishlist" | "addresses" | "settings";
+type AuthMode = "login" | "register" | "forgot";
 
 // Validation schemas
 const emailSchema = z.string().trim().email({ message: "Введите корректный email" });
@@ -18,9 +19,10 @@ const nameSchema = z.string().trim().min(2, { message: "Имя должно со
 const Account = () => {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [activeTab, setActiveTab] = useState<TabType>("profile");
-  const [isLogin, setIsLogin] = useState(true);
+  const [authMode, setAuthMode] = useState<AuthMode>("login");
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [successMessage, setSuccessMessage] = useState("");
   
   // Form states
   const [email, setEmail] = useState("");
@@ -89,16 +91,56 @@ const Account = () => {
     return true;
   };
 
+  const resetForm = () => {
+    setEmail("");
+    setPassword("");
+    setConfirmPassword("");
+    setName("");
+    setEmailError("");
+    setPasswordError("");
+    setConfirmPasswordError("");
+    setNameError("");
+    setGeneralError("");
+    setSuccessMessage("");
+  };
+
+  const switchAuthMode = (newMode: AuthMode) => {
+    resetForm();
+    setAuthMode(newMode);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setGeneralError("");
+    setSuccessMessage("");
+
+    // Режим восстановления пароля
+    if (authMode === "forgot") {
+      const isEmailValid = validateEmail(email);
+      if (!isEmailValid) return;
+
+      setIsLoading(true);
+      try {
+        // Симуляция отправки письма
+        await new Promise((resolve) => setTimeout(resolve, 1500));
+        setSuccessMessage("Инструкции по восстановлению пароля отправлены на вашу почту");
+        setTimeout(() => {
+          switchAuthMode("login");
+        }, 3000);
+      } catch (error) {
+        setGeneralError("Произошла ошибка. Попробуйте позже.");
+      } finally {
+        setIsLoading(false);
+      }
+      return;
+    }
 
     // Validate all fields
     const isEmailValid = validateEmail(email);
     const isPasswordValid = validatePassword(password);
     let isValid = isEmailValid && isPasswordValid;
 
-    if (!isLogin) {
+    if (authMode === "register") {
       const isNameValid = validateName(name);
       const isConfirmValid = validateConfirmPassword(confirmPassword);
       isValid = isValid && isNameValid && isConfirmValid;
@@ -121,23 +163,6 @@ const Account = () => {
     }
   };
 
-  const resetForm = () => {
-    setEmail("");
-    setPassword("");
-    setConfirmPassword("");
-    setName("");
-    setEmailError("");
-    setPasswordError("");
-    setConfirmPasswordError("");
-    setNameError("");
-    setGeneralError("");
-  };
-
-  const toggleMode = () => {
-    setIsLogin(!isLogin);
-    resetForm();
-  };
-
   if (!isLoggedIn) {
     return (
       <Layout>
@@ -148,17 +173,38 @@ const Account = () => {
             className="max-w-md mx-auto"
           >
             <div className="text-center mb-8">
+              {authMode === "forgot" ? (
+                <button
+                  onClick={() => switchAuthMode("login")}
+                  className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors mx-auto mb-4"
+                >
+                  <ArrowLeft size={18} />
+                  Назад
+                </button>
+              ) : null}
               <h1 className="text-3xl font-bold mb-2">
-                {isLogin ? "Вход" : "Регистрация"}
+                {authMode === "login" 
+                  ? "Вход" 
+                  : authMode === "register" 
+                  ? "Регистрация" 
+                  : "Восстановление пароля"}
               </h1>
               <p className="text-muted-foreground">
-                {isLogin
+                {authMode === "login"
                   ? "Войдите в свой аккаунт"
-                  : "Создайте аккаунт для покупок"}
+                  : authMode === "register"
+                  ? "Создайте аккаунт для покупок"
+                  : "Введите email для восстановления пароля"}
               </p>
             </div>
 
             <div className="bg-card rounded-2xl border border-border p-6">
+              {successMessage && (
+                <div className="flex items-center gap-2 p-3 mb-4 bg-primary/10 border border-primary/20 rounded-lg text-primary text-sm">
+                  {successMessage}
+                </div>
+              )}
+
               {generalError && (
                 <div className="flex items-center gap-2 p-3 mb-4 bg-destructive/10 border border-destructive/20 rounded-lg text-destructive text-sm">
                   <AlertCircle size={16} />
@@ -167,16 +213,16 @@ const Account = () => {
               )}
 
               <form onSubmit={handleSubmit} className="space-y-4">
-                {!isLogin && (
+                {authMode === "register" && (
                   <div>
                     <Label htmlFor="name">Имя</Label>
-                    <div className="relative mt-1">
-                      <User className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={18} />
+                    <div className="relative mt-1.5">
+                      <User className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" size={18} />
                       <Input
                         id="name"
                         type="text"
                         placeholder="Ваше имя"
-                        className={`pl-10 ${nameError ? "border-destructive" : ""}`}
+                        className={`pl-10 h-12 ${nameError ? "border-destructive" : ""}`}
                         value={name}
                         onChange={(e) => {
                           setName(e.target.value);
@@ -193,13 +239,13 @@ const Account = () => {
                 
                 <div>
                   <Label htmlFor="email">Email</Label>
-                  <div className="relative mt-1">
-                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={18} />
+                  <div className="relative mt-1.5">
+                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" size={18} />
                     <Input
                       id="email"
                       type="email"
                       placeholder="email@example.com"
-                      className={`pl-10 ${emailError ? "border-destructive" : ""}`}
+                      className={`pl-10 h-12 ${emailError ? "border-destructive" : ""}`}
                       value={email}
                       onChange={(e) => {
                         setEmail(e.target.value);
@@ -213,45 +259,47 @@ const Account = () => {
                   )}
                 </div>
                 
-                <div>
-                  <Label htmlFor="password">Пароль</Label>
-                  <div className="relative mt-1">
-                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={18} />
-                    <Input
-                      id="password"
-                      type={showPassword ? "text" : "password"}
-                      placeholder="••••••••"
-                      className={`pl-10 pr-10 ${passwordError ? "border-destructive" : ""}`}
-                      value={password}
-                      onChange={(e) => {
-                        setPassword(e.target.value);
-                        if (passwordError) validatePassword(e.target.value);
-                      }}
-                      onBlur={() => password && validatePassword(password)}
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                    >
-                      {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-                    </button>
+                {authMode !== "forgot" && (
+                  <div>
+                    <Label htmlFor="password">Пароль</Label>
+                    <div className="relative mt-1.5">
+                      <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" size={18} />
+                      <Input
+                        id="password"
+                        type={showPassword ? "text" : "password"}
+                        placeholder="••••••••"
+                        className={`pl-10 pr-10 h-12 ${passwordError ? "border-destructive" : ""}`}
+                        value={password}
+                        onChange={(e) => {
+                          setPassword(e.target.value);
+                          if (passwordError) validatePassword(e.target.value);
+                        }}
+                        onBlur={() => password && validatePassword(password)}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword(!showPassword)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                      >
+                        {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                      </button>
+                    </div>
+                    {passwordError && (
+                      <p className="text-destructive text-sm mt-1">{passwordError}</p>
+                    )}
                   </div>
-                  {passwordError && (
-                    <p className="text-destructive text-sm mt-1">{passwordError}</p>
-                  )}
-                </div>
+                )}
                 
-                {!isLogin && (
+                {authMode === "register" && (
                   <div>
                     <Label htmlFor="confirmPassword">Подтвердите пароль</Label>
-                    <div className="relative mt-1">
-                      <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={18} />
+                    <div className="relative mt-1.5">
+                      <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" size={18} />
                       <Input
                         id="confirmPassword"
                         type={showPassword ? "text" : "password"}
                         placeholder="••••••••"
-                        className={`pl-10 ${confirmPasswordError ? "border-destructive" : ""}`}
+                        className={`pl-10 h-12 ${confirmPasswordError ? "border-destructive" : ""}`}
                         value={confirmPassword}
                         onChange={(e) => {
                           setConfirmPassword(e.target.value);
@@ -266,10 +314,11 @@ const Account = () => {
                   </div>
                 )}
 
-                {isLogin && (
+                {authMode === "login" && (
                   <div className="text-right">
                     <button
                       type="button"
+                      onClick={() => switchAuthMode("forgot")}
                       className="text-primary text-sm hover:underline"
                     >
                       Забыли пароль?
@@ -279,7 +328,7 @@ const Account = () => {
 
                 <Button
                   type="submit"
-                  className="w-full btn-gold py-5"
+                  className="w-full btn-gold h-12"
                   disabled={isLoading}
                 >
                   {isLoading ? (
@@ -287,23 +336,29 @@ const Account = () => {
                       <span className="w-4 h-4 border-2 border-primary-foreground border-t-transparent rounded-full animate-spin" />
                       Загрузка...
                     </span>
+                  ) : authMode === "forgot" ? (
+                    "Отправить инструкции"
+                  ) : authMode === "login" ? (
+                    "Войти"
                   ) : (
-                    isLogin ? "Войти" : "Зарегистрироваться"
+                    "Зарегистрироваться"
                   )}
                 </Button>
               </form>
 
-              <div className="mt-6 text-center">
-                <p className="text-muted-foreground text-sm">
-                  {isLogin ? "Нет аккаунта?" : "Уже есть аккаунт?"}{" "}
-                  <button
-                    onClick={toggleMode}
-                    className="text-primary hover:underline"
-                  >
-                    {isLogin ? "Зарегистрируйтесь" : "Войдите"}
-                  </button>
-                </p>
-              </div>
+              {authMode !== "forgot" && (
+                <div className="mt-6 text-center">
+                  <p className="text-muted-foreground text-sm">
+                    {authMode === "login" ? "Нет аккаунта?" : "Уже есть аккаунт?"}{" "}
+                    <button
+                      onClick={() => switchAuthMode(authMode === "login" ? "register" : "login")}
+                      className="text-primary hover:underline"
+                    >
+                      {authMode === "login" ? "Зарегистрируйтесь" : "Войдите"}
+                    </button>
+                  </p>
+                </div>
+              )}
             </div>
           </motion.div>
         </div>
@@ -382,7 +437,7 @@ const Account = () => {
                       <Input
                         id="profileName"
                         defaultValue={user.name}
-                        className="mt-1"
+                        className="mt-1.5 h-12"
                       />
                     </div>
                     <div>
@@ -391,7 +446,7 @@ const Account = () => {
                         id="profileEmail"
                         type="email"
                         defaultValue={user.email}
-                        className="mt-1"
+                        className="mt-1.5 h-12"
                       />
                     </div>
                     <div>
@@ -399,7 +454,7 @@ const Account = () => {
                       <Input
                         id="profilePhone"
                         defaultValue={user.phone}
-                        className="mt-1"
+                        className="mt-1.5 h-12"
                       />
                     </div>
                     <Button className="btn-gold">Сохранить изменения</Button>
@@ -449,23 +504,38 @@ const Account = () => {
                   <h2 className="text-xl font-semibold mb-6">Настройки</h2>
                   <div className="space-y-6 max-w-md">
                     <div>
-                      <h3 className="font-medium mb-3">Уведомления</h3>
-                      <label className="flex items-center gap-3">
-                        <input
-                          type="checkbox"
-                          className="w-4 h-4 rounded border-border"
-                          defaultChecked
-                        />
-                        <span className="text-sm">Email-уведомления о заказах</span>
-                      </label>
-                    </div>
-                    <div>
-                      <h3 className="font-medium mb-3">Изменить пароль</h3>
+                      <h3 className="font-medium mb-3">Сменить пароль</h3>
                       <div className="space-y-3">
-                        <Input type="password" placeholder="Текущий пароль" />
-                        <Input type="password" placeholder="Новый пароль" />
-                        <Input type="password" placeholder="Подтвердите новый пароль" />
-                        <Button className="btn-gold">Изменить пароль</Button>
+                        <div>
+                          <Label htmlFor="currentPassword">Текущий пароль</Label>
+                          <Input
+                            id="currentPassword"
+                            type="password"
+                            className="mt-1.5 h-12"
+                          />
+                        </div>
+                        <div>
+                          <Label htmlFor="newPassword">Новый пароль</Label>
+                          <Input
+                            id="newPassword"
+                            type="password"
+                            className="mt-1.5 h-12"
+                          />
+                        </div>
+                        <Button className="btn-gold">Сменить пароль</Button>
+                      </div>
+                    </div>
+                    <div className="pt-6 border-t border-border">
+                      <h3 className="font-medium mb-3">Уведомления</h3>
+                      <div className="space-y-3">
+                        <label className="flex items-center gap-3 cursor-pointer">
+                          <input type="checkbox" className="w-5 h-5 rounded border-border" defaultChecked />
+                          <span className="text-sm">Новости и акции</span>
+                        </label>
+                        <label className="flex items-center gap-3 cursor-pointer">
+                          <input type="checkbox" className="w-5 h-5 rounded border-border" defaultChecked />
+                          <span className="text-sm">Статус заказа</span>
+                        </label>
                       </div>
                     </div>
                   </div>
