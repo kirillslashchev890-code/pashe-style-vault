@@ -4,79 +4,24 @@ import { ArrowUpRight, ChevronLeft, ChevronRight } from "lucide-react";
 import { useRef } from "react";
 import { Button } from "@/components/ui/button";
 
+// ============================================
+// 🖼️ ИЗОБРАЖЕНИЯ КАТЕГОРИЙ
+// Положите фото в папку: public/images/categories/
+// Рекомендуемый размер: 600x800
+// ============================================
 const categories = [
-  {
-    id: "tshirts",
-    name: "Футболки",
-    description: "Базовые и с принтом",
-    image: "https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=600&h=800&fit=crop",
-  },
-  {
-    id: "outerwear",
-    name: "Верхняя одежда",
-    description: "Куртки, пальто, пуховики",
-    image: "https://images.unsplash.com/photo-1551028719-00167b16eac5?w=600&h=800&fit=crop",
-  },
-  {
-    id: "shirts",
-    name: "Рубашки",
-    description: "Классические и casual",
-    image: "https://images.unsplash.com/photo-1602810318383-e386cc2a3ccf?w=600&h=800&fit=crop",
-  },
-  {
-    id: "pants",
-    name: "Брюки",
-    description: "Чиносы, джоггеры, классика",
-    image: "https://images.unsplash.com/photo-1624378439575-d8705ad7ae80?w=600&h=800&fit=crop",
-  },
-  {
-    id: "jeans",
-    name: "Джинсы",
-    description: "Slim, straight, relaxed",
-    image: "https://images.unsplash.com/photo-1542272604-787c3835535d?w=600&h=800&fit=crop",
-  },
-  {
-    id: "shorts",
-    name: "Шорты",
-    description: "Casual и спортивные",
-    image: "https://images.unsplash.com/photo-1591195853828-11db59a44f6b?w=600&h=800&fit=crop",
-  },
-  {
-    id: "sweatshirts",
-    name: "Свитшоты",
-    description: "Базовые и с принтом",
-    image: "https://images.unsplash.com/photo-1556821840-3a63f95609a7?w=600&h=800&fit=crop",
-  },
-  {
-    id: "polo",
-    name: "Поло",
-    description: "Классика стиля",
-    image: "https://images.unsplash.com/photo-1625910513413-5fc41ef81b18?w=600&h=800&fit=crop",
-  },
-  {
-    id: "shoes",
-    name: "Обувь",
-    description: "Кроссовки, ботинки, лоферы",
-    image: "https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=600&h=800&fit=crop",
-  },
-  {
-    id: "suits",
-    name: "Костюмы",
-    description: "Деловые и повседневные",
-    image: "https://images.unsplash.com/photo-1594938298603-c8148c4dae35?w=600&h=800&fit=crop",
-  },
-  {
-    id: "accessories",
-    name: "Аксессуары",
-    description: "Ремни, сумки, кошельки",
-    image: "https://images.unsplash.com/photo-1553062407-98eeb64c6a62?w=600&h=800&fit=crop",
-  },
-  {
-    id: "caps",
-    name: "Кепки",
-    description: "Бейсболки, шапки, панамы",
-    image: "https://images.unsplash.com/photo-1588850561407-ed78c282e89b?w=600&h=800&fit=crop",
-  },
+  { id: "tshirts", name: "Футболки", description: "Базовые и с принтом", image: "/images/categories/tshirts.jpg" },
+  { id: "outerwear", name: "Верхняя одежда", description: "Куртки, пальто, пуховики", image: "/images/categories/outerwear.jpg" },
+  { id: "shirts", name: "Рубашки", description: "Классические и casual", image: "/images/categories/shirts.jpg" },
+  { id: "pants", name: "Брюки", description: "Чиносы, джоггеры, классика", image: "/images/categories/pants.jpg" },
+  { id: "jeans", name: "Джинсы", description: "Slim, straight, relaxed", image: "/images/categories/jeans.jpg" },
+  { id: "shorts", name: "Шорты", description: "Casual и спортивные", image: "/images/categories/shorts.jpg" },
+  { id: "sweatshirts", name: "Свитшоты", description: "Базовые и с принтом", image: "/images/categories/sweatshirts.jpg" },
+  { id: "polo", name: "Поло", description: "Классика стиля", image: "/images/categories/polo.jpg" },
+  { id: "shoes", name: "Обувь", description: "Кроссовки, ботинки, лоферы", image: "/images/categories/shoes.jpg" },
+  { id: "suits", name: "Костюмы", description: "Деловые и повседневные", image: "/images/categories/suits.jpg" },
+  { id: "accessories", name: "Аксессуары", description: "Ремни, сумки, кошельки", image: "/images/categories/accessories.jpg" },
+  { id: "caps", name: "Кепки", description: "Бейсболки, шапки, панамы", image: "/images/categories/caps.jpg" },
 ];
 
 const CategoriesSection = () => {

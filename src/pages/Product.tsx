@@ -31,6 +31,11 @@ const Product = () => {
   // Find product by ID or use first product as fallback
   const product = getProductById(id || "") || products[0];
 
+  // Получаем изображения для выбранного цвета
+  const currentImages = selectedColor && product.colorImages?.[selectedColor]
+    ? product.colorImages[selectedColor]
+    : product.images;
+
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat("ru-RU", {
       style: "currency",
@@ -67,7 +72,7 @@ const Product = () => {
               onClick={() => setLightboxOpen(true)}
             >
               <img
-                src={product.images[selectedImage]}
+                src={currentImages[selectedImage]}
                 alt={product.name}
                 className="absolute inset-0 w-full h-full object-cover hover:scale-105 transition-transform duration-300"
               />
@@ -86,9 +91,9 @@ const Product = () => {
               </div>
             </div>
             <div className="flex gap-4">
-              {product.images.map((image, index) => (
+              {currentImages.map((image, index) => (
                 <button
-                  key={index}
+                  key={`${selectedColor}-${index}`}
                   onClick={() => setSelectedImage(index)}
                   className={`relative aspect-square w-20 rounded-lg overflow-hidden border-2 transition-colors ${
                     selectedImage === index
@@ -98,7 +103,7 @@ const Product = () => {
                 >
                   <img
                     src={image}
-                    alt={`${product.name} - ${index + 1}`}
+                    alt={`${product.name} - ${selectedColor} - ${index + 1}`}
                     className="absolute inset-0 w-full h-full object-cover"
                   />
                 </button>
@@ -139,7 +144,10 @@ const Product = () => {
                 {product.colors.map((color) => (
                   <button
                     key={color.name}
-                    onClick={() => setSelectedColor(color.name)}
+                    onClick={() => {
+                      setSelectedColor(color.name);
+                      setSelectedImage(0); // Сбрасываем выбранное фото при смене цвета
+                    }}
                     className={`flex items-center gap-2 px-4 py-2 rounded-lg border text-sm transition-colors ${
                       selectedColor === color.name
                         ? "border-primary bg-primary/10"
@@ -391,7 +399,7 @@ const Product = () => {
 
       {/* Image Lightbox */}
       <ImageLightbox
-        images={product.images}
+        images={currentImages}
         initialIndex={selectedImage}
         isOpen={lightboxOpen}
         onClose={() => setLightboxOpen(false)}
