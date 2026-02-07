@@ -6,12 +6,13 @@ import { Button } from "@/components/ui/button";
 
 // ============================================
 // 🖼️ ЗАМЕНИТЕ ИЗОБРАЖЕНИЯ НИЖЕ НА СВОИ
-// Формат: URL изображения (рекомендуемый размер: 1920x1080)
+// Положите фото в папку: public/images/hero/
+// Рекомендуемый размер: 1920x1080
 // ============================================
 const heroImages = [
-  "https://images.unsplash.com/photo-1490481651871-ab68de25d43d?w=1920&h=1080&fit=crop", // Изображение 1 - замените на своё
-  "https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=1920&h=1080&fit=crop", // Изображение 2 - замените на своё
-  "https://images.unsplash.com/photo-1558171813-4c088753af8f?w=1920&h=1080&fit=crop", // Изображение 3 - замените на своё
+  "/images/hero/slide-1.jpg", // 🖼️ Замените: public/images/hero/slide-1.jpg
+  "/images/hero/slide-2.jpg", // 🖼️ Замените: public/images/hero/slide-2.jpg
+  "/images/hero/slide-3.jpg", // 🖼️ Замените: public/images/hero/slide-3.jpg
 ];
 
 const HeroSection = () => {

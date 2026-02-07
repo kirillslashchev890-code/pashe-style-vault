@@ -1,6 +1,54 @@
 // ============================================
-// 📦 КАТАЛОГ ТОВАРОВ
-// Здесь вы можете заменить данные товаров на свои
+// 📦 КАТАЛОГ ТОВАРОВ PASHE
+// ============================================
+// 📁 СТРУКТУРА ПАПОК ДЛЯ ИЗОБРАЖЕНИЙ:
+//
+// public/
+//   images/
+//     hero/
+//       slide-1.jpg          ← Фото для карусели на главной (1920x1080)
+//       slide-2.jpg
+//       slide-3.jpg
+//     categories/
+//       tshirts.jpg          ← Фото категории (600x800)
+//       outerwear.jpg
+//       shirts.jpg
+//       pants.jpg
+//       jeans.jpg
+//       shorts.jpg
+//       sweatshirts.jpg
+//       polo.jpg
+//       shoes.jpg
+//       accessories.jpg
+//       caps.jpg
+//       suits.jpg
+//     products/
+//       tshirts/
+//         tshirt-1/
+//           black/
+//             front.jpg      ← Фото спереди (800x1000)
+//             side.jpg       ← Фото сбоку
+//             back.jpg       ← Фото сзади
+//           white/
+//             front.jpg
+//             side.jpg
+//             back.jpg
+//           gray/
+//             front.jpg
+//             side.jpg
+//             back.jpg
+//         tshirt-2/
+//           ...
+//       jeans/
+//         jeans-1/
+//           blue/
+//             front.jpg
+//             side.jpg
+//             back.jpg
+//           ...
+//   videos/
+//     hero-video.mp4         ← Видео для второго блока
+//     video-poster.jpg       ← Постер для видео (1920x1080)
 // ============================================
 
 export interface Product {
@@ -16,472 +64,598 @@ export interface Product {
   composition: string;
   care: string;
   country: string;
-  images: string[]; // Массив изображений (минимум 3 фото с разных ракурсов)
+  // 🎨 Изображения для каждого цвета: { "Чёрный": [front, side, back], ... }
+  colorImages: Record<string, string[]>;
+  // Изображения по умолчанию (первый цвет)
+  images: string[];
   sizes: { name: string; available: boolean }[];
-  colors: { name: string; hex: string }[]; // Цвета с HEX кодами
+  colors: { name: string; hex: string }[];
   isNew?: boolean;
   isSale?: boolean;
 }
 
 // ============================================
-// 🖼️ ЗАМЕНИТЕ URL ИЗОБРАЖЕНИЙ НА СВОИ
-// Рекомендуемый размер: 800x1000px
-// Формат: [фронт, сбоку, сзади, деталь]
+// 🔧 ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ
 // ============================================
 
-// Mock products data - 20+ per category
+// Генерация путей к фото товара
+// 📁 Формат: /images/products/{категория}/{id}/{цвет}/front.jpg
+const pi = (cat: string, id: string, colorFolder: string): string[] => [
+  `/images/products/${cat}/${id}/${colorFolder}/front.jpg`,
+  `/images/products/${cat}/${id}/${colorFolder}/side.jpg`,
+  `/images/products/${cat}/${id}/${colorFolder}/back.jpg`,
+];
+
+// Генерация colorImages из массива цветов
+type CEntry = { name: string; hex: string; folder: string };
+const ci = (cat: string, id: string, colors: CEntry[]): Record<string, string[]> =>
+  Object.fromEntries(colors.map(c => [c.name, pi(cat, id, c.folder)]));
+
+// ============================================
+// 🎨 ЦВЕТОВЫЕ НАБОРЫ
+// ============================================
+const C = {
+  black: { name: "Чёрный", hex: "#1A1A1A", folder: "black" } as CEntry,
+  white: { name: "Белый", hex: "#FFFFFF", folder: "white" } as CEntry,
+  gray: { name: "Серый", hex: "#6B7280", folder: "gray" } as CEntry,
+  navy: { name: "Тёмно-синий", hex: "#1E3A5F", folder: "navy" } as CEntry,
+  khaki: { name: "Хаки", hex: "#5B5B3E", folder: "khaki" } as CEntry,
+  beige: { name: "Бежевый", hex: "#C4A77D", folder: "beige" } as CEntry,
+  blue: { name: "Синий", hex: "#4169E1", folder: "blue" } as CEntry,
+  lightBlue: { name: "Голубой", hex: "#87CEEB", folder: "light-blue" } as CEntry,
+  brown: { name: "Коричневый", hex: "#8B4513", folder: "brown" } as CEntry,
+  burgundy: { name: "Бордовый", hex: "#800020", folder: "burgundy" } as CEntry,
+};
+
+// Наборы цветов для категорий
+const COLOR_SETS = {
+  tshirts: [C.black, C.white, C.gray],
+  outerwear: [C.black, C.navy, C.khaki],
+  shirts: [C.white, C.lightBlue, C.black],
+  pants: [C.black, C.beige, C.gray],
+  jeans: [C.blue, C.black, C.lightBlue],
+  shorts: [C.beige, C.black, C.khaki],
+  sweatshirts: [C.black, C.gray, C.beige],
+  polo: [C.white, C.navy, C.black],
+  shoes: [C.black, C.white, C.brown],
+  accessories: [C.black, C.brown, C.navy],
+  caps: [C.black, C.white, C.beige],
+  suits: [C.black, C.navy, C.gray],
+};
+
+const toColors = (entries: CEntry[]) => entries.map(({ name, hex }) => ({ name, hex }));
+
+// ============================================
+// 👕 НАЗВАНИЯ ТОВАРОВ
+// ============================================
+
+const NAMES = {
+  tshirts: [
+    "Футболка Essential Crew", "Футболка Urban Oversized", "Футболка Midnight Graphic",
+    "Футболка Street Logo", "Футболка Classic V-Neck", "Футболка Sport Active",
+    "Футболка Premium Pima", "Футболка Vintage Wash", "Футболка Henley Ribbed",
+    "Футболка Relaxed Basic", "Футболка Nautical Stripe", "Футболка Color Block",
+    "Футболка Raw Edge", "Футболка Longline Base", "Футболка Pocket Crew",
+    "Футболка Acid Wash", "Футболка Embroidered Logo", "Футболка Slim Ribbed",
+    "Футболка French Terry", "Футболка Heavyweight Classic",
+  ],
+  outerwear: [
+    "Пуховик Alpine Down", "Бомбер Urban Classic", "Тренч Classic London",
+    "Ветровка Tech Shield", "Пальто Wool Overcoat", "Жилет Quilted Comfort",
+    "Куртка Leather Biker", "Парка Explorer Pro", "Куртка Sherpa Lined",
+    "Куртка Field Military", "Бомбер Varsity Sport", "Куртка Rain Shell",
+    "Пуховик Cropped Puffer", "Куртка Denim Trucker", "Куртка Cargo Utility",
+    "Блейзер Casual Cotton", "Куртка Nylon Track", "Куртка Suede Aviator",
+    "Бушлат Peacoat Navy", "Куртка Softshell Sport",
+  ],
+  shirts: [
+    "Рубашка Oxford Classic", "Рубашка Linen Breeze", "Рубашка Denim Western",
+    "Рубашка Poplin Fitted", "Рубашка Flannel Check", "Рубашка Chambray Casual",
+    "Рубашка Mandarin Collar", "Рубашка Button-Down Stripe", "Рубашка Twill Cargo",
+    "Рубашка Slim Fit White", "Рубашка Hawaiian Print", "Рубашка Corduroy Vintage",
+    "Рубашка Brushed Cotton", "Рубашка Micro Check", "Рубашка Band Collar",
+    "Рубашка Camp Collar", "Рубашка Stretch Comfort", "Рубашка Herringbone",
+    "Рубашка Dobby Texture", "Рубашка French Cuff",
+  ],
+  pants: [
+    "Брюки Classic Chinos", "Брюки Slim Tailored", "Брюки Cargo Utility",
+    "Джоггеры Premium Fit", "Брюки Pleated Wide", "Брюки Tech Stretch",
+    "Брюки Linen Summer", "Брюки Corduroy Vintage", "Брюки Wool Blend",
+    "Брюки Drawstring Relaxed", "Брюки Cropped Ankle", "Брюки Track Sport",
+    "Брюки Paper Bag Waist", "Брюки Military Cargo", "Брюки Twill Regular",
+    "Брюки Slim Straight", "Брюки Elastic Waist", "Брюки Jersey Comfort",
+    "Брюки Patch Pocket", "Брюки Tapered Modern",
+  ],
+  jeans: [
+    "Джинсы Slim Dark Indigo", "Джинсы Straight Classic", "Джинсы Relaxed Vintage",
+    "Джинсы Skinny Black", "Джинсы Regular Comfort", "Джинсы Bootcut Western",
+    "Джинсы Tapered Modern", "Джинсы Wide Leg", "Джинсы Cropped Ankle",
+    "Джинсы Destroyed Wash", "Джинсы Raw Denim", "Джинсы Stretch Flex",
+    "Джинсы Carpenter Work", "Джинсы Baggy Street", "Джинсы High Rise",
+    "Джинсы Button Fly", "Джинсы Selvedge Premium", "Джинсы Acid Washed",
+    "Джинсы Patchwork", "Джинсы Ultra Slim",
+  ],
+  shorts: [
+    "Шорты Casual Chino", "Шорты Sport Active", "Шорты Denim Classic",
+    "Шорты Cargo Utility", "Шорты Board Beach", "Шорты Swim Trunk",
+    "Шорты Linen Breeze", "Шорты Fleece Comfort", "Шорты Running Pro",
+    "Шорты Tailored Smart", "Шорты Drawstring Easy", "Шорты Bermuda Long",
+    "Шорты Tech Stretch", "Шорты Plaid Check", "Шорты Camo Print",
+    "Шорты Sweat Casual", "Шорты Nylon Quick-Dry", "Шорты Oxford Preppy",
+    "Шорты Twill Heavy", "Шорты Jersey Knit",
+  ],
+  sweatshirts: [
+    "Свитшот Classic Crew", "Свитшот Graphic Print", "Свитшот Oversized Drop",
+    "Свитшот Premium Fleece", "Свитшот Vintage Washed", "Свитшот Zip-Up Mock",
+    "Свитшот Color Block", "Свитшот Acid Wash", "Свитшот Embroidered Logo",
+    "Свитшот French Terry", "Свитшот Tie-Dye", "Свитшот Kangaroo Pocket",
+    "Свитшот Distressed Edge", "Свитшот Striped Retro", "Свитшот Quarter Zip",
+    "Свитшот Raglan Sleeve", "Свитшот Heavy Fleece", "Свитшот Minimal Logo",
+    "Свитшот Cropped Fit", "Свитшот Athletic Ribbed",
+  ],
+  polo: [
+    "Поло Classic Pique", "Поло Sport Performance", "Поло Slim Fit Essential",
+    "Поло Contrast Collar", "Поло Long Sleeve", "Поло Stretch Cotton",
+    "Поло Mercerized Premium", "Поло Knitted Textured", "Поло Oxford Collar",
+    "Поло Tipped Detail", "Поло Jersey Soft", "Поло Button-Down",
+    "Поло Moisture-Wicking", "Поло Block Stripe", "Поло Zip Neck",
+    "Поло French Terry", "Поло Pima Cotton", "Поло Rugby Stripe",
+    "Поло Luxury Blend", "Поло Tech Dry",
+  ],
+  shoes: [
+    "Кроссовки Classic Runner", "Ботинки Chelsea Suede", "Лоферы Penny Classic",
+    "Кроссовки Sport Elite", "Ботинки Desert Sand", "Кеды Canvas Low-Top",
+    "Дерби Leather Oxford", "Ботинки Hiking Trail", "Слипоны Casual Knit",
+    "Кеды High-Top Urban", "Броги Oxford Wing", "Мокасины Suede Driver",
+    "Кроссовки Chunky Platform", "Кроссовки Minimalist White", "Ботинки Combat Heavy",
+    "Эспадрильи Summer Linen", "Монки Double Strap", "Кроссовки Athletic Cross",
+    "Мокасины Driving Leather", "Ботинки Winter Insulated",
+  ],
+  accessories: [
+    "Ремень Leather Classic", "Сумка Crossbody Urban", "Кошелёк Bifold Premium",
+    "Шарф Cashmere Soft", "Очки Aviator Gold", "Сумка Canvas Tote",
+    "Картхолдер Slim Leather", "Шарф Wool Winter", "Очки Wayfarer Dark",
+    "Сумка Messenger Business", "Зажим для денег Silver", "Галстук Silk Classic",
+    "Рюкзак Urban Daily", "Портмоне Travel Premium", "Очки Round Retro",
+    "Сумка Laptop Professional", "Ремень Braided Leather", "Платок Pocket Square",
+    "Сумка Weekender Travel", "Запонки Classic Set",
+  ],
+  caps: [
+    "Бейсболка Classic Logo", "Шапка Wool Beanie", "Панама Summer Breeze",
+    "Снепбек Urban Street", "Панама Bucket Classic", "Кепка Flat Vintage",
+    "Бейсболка Trucker Mesh", "Козырёк Sport Visor", "Кепка Docker Sailor",
+    "Кепка Newsboy Tweed", "Шапка Trapper Winter", "Кепка Camp Five-Panel",
+    "Шляпа Fedora Felt", "Кепка Sun Protect UV", "Шапка Watch Knit",
+    "Кепка Five Panel Nylon", "Бейсболка Dad Hat", "Кепка Athletic Dry",
+    "Шляпа Straw Summer", "Шапка Ear Flap Winter",
+  ],
+  suits: [
+    "Костюм Classic Business", "Костюм Slim Modern", "Костюм Double-Breasted",
+    "Костюм Linen Summer", "Костюм Wedding Formal", "Костюм Pinstripe Executive",
+    "Костюм Casual Unstructured", "Костюм Three-Piece", "Смокинг Evening Black",
+    "Костюм Wool Flannel", "Костюм Check Pattern", "Костюм Stretch Comfort",
+    "Костюм Italian Fit", "Костюм Peak Lapel", "Костюм Notch Lapel",
+    "Костюм Windowpane", "Костюм Velvet Evening", "Костюм Cotton Summer",
+    "Костюм Houndstooth", "Костюм Travel Wrinkle-Free",
+  ],
+};
+
+// ============================================
+// 📦 ГЕНЕРАЦИЯ ТОВАРОВ
+// ============================================
+
 export const products: Product[] = [
   // ============================================
-  // 👕 ФУТБОЛКИ (tshirts)
+  // 👕 ФУТБОЛКИ (tshirts) — 20 товаров
+  // 🖼️ Фото: public/images/products/tshirts/tshirt-{N}/{color}/front|side|back.jpg
   // ============================================
-  ...Array.from({ length: 20 }, (_, i) => ({
-    id: `tshirt-${i + 1}`,
-    name: `Футболка ${["базовая", "с принтом", "оверсайз", "slim fit", "premium"][i % 5]} ${i + 1}`,
-    price: 1990 + (i % 5) * 500,
-    originalPrice: i % 3 === 0 ? 2990 + (i % 5) * 500 : undefined,
-    category: "tshirts",
-    subcategory: ["basic-tshirts", "print-tshirts", "oversized-tshirts"][i % 3],
-    season: ["summer", "spring", "autumn"][i % 3],
-    brand: ["PASHE Original", "Premium Line", "Urban Style"][i % 3],
-    description: "Качественная футболка из хлопка. Удобный крой, мягкая ткань. Подходит для повседневной носки.",
-    composition: "100% хлопок",
-    care: "Машинная стирка при 30°C",
-    country: "Турция",
-    // 🖼️ ЗАМЕНИТЕ ИЗОБРАЖЕНИЯ НИЖЕ НА СВОИ (3-4 фото с разных ракурсов)
-    images: [
-      `https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=800&h=1000&fit=crop`, // Фронт
-      `https://images.unsplash.com/photo-1503341504253-dff4815485f1?w=800&h=1000&fit=crop`, // Сбоку
-      `https://images.unsplash.com/photo-1583743814966-8936f5b7be1a?w=800&h=1000&fit=crop`, // Сзади
-    ],
-    sizes: [
-      { name: "XS", available: i % 4 !== 0 },
-      { name: "S", available: true },
-      { name: "M", available: true },
-      { name: "L", available: i % 3 !== 0 },
-      { name: "XL", available: i % 5 !== 0 },
-      { name: "XXL", available: i % 2 === 0 },
-    ],
-    // 🎨 ЦВЕТА ТОВАРА (name - название, hex - код цвета)
-    colors: [
-      { name: "Белый", hex: "#FFFFFF" },
-      { name: "Чёрный", hex: "#1A1A1A" },
-      { name: "Серый", hex: "#6B7280" },
-    ],
-    isNew: i < 5,
-    isSale: i % 3 === 0,
-  })),
+  ...Array.from({ length: 20 }, (_, i) => {
+    const id = `tshirt-${i + 1}`;
+    const colors = COLOR_SETS.tshirts;
+    return {
+      id,
+      name: NAMES.tshirts[i],
+      price: [1990, 2490, 2990, 3490, 3990, 2190, 4490, 2790, 3190, 1790, 2690, 3290, 2390, 1990, 2590, 3690, 4190, 2890, 3390, 4990][i],
+      originalPrice: i % 3 === 0 ? [1990, 2490, 2990, 3490, 3990, 2190, 4490, 2790, 3190, 1790, 2690, 3290, 2390, 1990, 2590, 3690, 4190, 2890, 3390, 4990][i] + 1000 : undefined,
+      category: "tshirts",
+      subcategory: ["basic-tshirts", "print-tshirts", "oversized-tshirts"][i % 3],
+      season: ["summer", "spring", "autumn"][i % 3] as string,
+      brand: ["PASHE Original", "Premium Line", "Urban Style"][i % 3],
+      description: "Качественная футболка из мягкого хлопка. Комфортный крой для повседневной носки.",
+      composition: "100% хлопок",
+      care: "Машинная стирка при 30°C",
+      country: "Турция",
+      colorImages: ci("tshirts", id, colors),
+      images: pi("tshirts", id, colors[0].folder),
+      sizes: [
+        { name: "XS", available: i % 4 !== 0 },
+        { name: "S", available: true },
+        { name: "M", available: true },
+        { name: "L", available: i % 3 !== 0 },
+        { name: "XL", available: i % 5 !== 0 },
+        { name: "XXL", available: i % 2 === 0 },
+      ],
+      colors: toColors(colors),
+      isNew: i < 5,
+      isSale: i % 3 === 0,
+    } as Product;
+  }),
 
   // ============================================
-  // 🧥 ВЕРХНЯЯ ОДЕЖДА (outerwear)
+  // 🧥 ВЕРХНЯЯ ОДЕЖДА (outerwear) — 20 товаров
+  // 🖼️ Фото: public/images/products/outerwear/outerwear-{N}/{color}/front|side|back.jpg
   // ============================================
-  ...Array.from({ length: 20 }, (_, i) => ({
-    id: `outerwear-${i + 1}`,
-    name: `${["Куртка", "Пальто", "Пуховик", "Бомбер", "Парка"][i % 5]} ${i + 1}`,
-    price: 12990 + (i % 5) * 2000,
-    originalPrice: i % 4 === 0 ? 18990 + (i % 5) * 2000 : undefined,
-    category: "outerwear",
-    subcategory: ["jackets-winter", "coats", "down-jackets", "jackets-autumn", "jackets-summer"][i % 5],
-    season: ["winter", "autumn", "winter", "autumn", "summer"][i % 5],
-    brand: ["PASHE Original", "Premium Line", "Classic Edition"][i % 3],
-    description: "Стильная верхняя одежда для любой погоды. Качественные материалы, продуманный крой.",
-    composition: "Внешний материал: 100% полиэстер, Подкладка: 100% полиэстер, Утеплитель: 80% пух 20% перо",
-    care: "Сухая чистка",
-    country: "Италия",
-    // 🖼️ ЗАМЕНИТЕ ИЗОБРАЖЕНИЯ НИЖЕ НА СВОИ
-    images: [
-      `https://images.unsplash.com/photo-1551028719-00167b16eac5?w=800&h=1000&fit=crop`,
-      `https://images.unsplash.com/photo-1544923246-77307dd628b1?w=800&h=1000&fit=crop`,
-      `https://images.unsplash.com/photo-1539533018447-63fcce2678e3?w=800&h=1000&fit=crop`,
-    ],
-    sizes: [
-      { name: "S", available: i % 3 !== 0 },
-      { name: "M", available: true },
-      { name: "L", available: true },
-      { name: "XL", available: i % 4 !== 0 },
-      { name: "XXL", available: i % 2 === 0 },
-    ],
-    colors: [
-      { name: "Чёрный", hex: "#1A1A1A" },
-      { name: "Тёмно-синий", hex: "#1E3A5F" },
-      { name: "Хаки", hex: "#5B5B3E" },
-    ],
-    isNew: i < 4,
-    isSale: i % 4 === 0,
-  })),
+  ...Array.from({ length: 20 }, (_, i) => {
+    const id = `outerwear-${i + 1}`;
+    const colors = COLOR_SETS.outerwear;
+    return {
+      id,
+      name: NAMES.outerwear[i],
+      price: [12990, 9990, 15990, 7990, 19990, 6990, 24990, 14990, 11990, 8990, 10990, 5990, 13990, 8490, 9490, 11490, 7490, 21990, 16990, 6490][i],
+      originalPrice: i % 4 === 0 ? [12990, 9990, 15990, 7990, 19990, 6990, 24990, 14990, 11990, 8990, 10990, 5990, 13990, 8490, 9490, 11490, 7490, 21990, 16990, 6490][i] + 5000 : undefined,
+      category: "outerwear",
+      subcategory: ["jackets-winter", "jackets-autumn", "jackets-summer", "coats", "down-jackets"][i % 5],
+      season: ["winter", "autumn", "summer", "autumn", "winter"][i % 5] as string,
+      brand: ["PASHE Original", "Premium Line", "Classic Edition"][i % 3],
+      description: "Стильная верхняя одежда для любой погоды. Качественные материалы, продуманный крой.",
+      composition: "Внешний материал: 100% полиэстер, Подкладка: 100% полиэстер",
+      care: "Сухая чистка",
+      country: "Италия",
+      colorImages: ci("outerwear", id, colors),
+      images: pi("outerwear", id, colors[0].folder),
+      sizes: [
+        { name: "S", available: i % 3 !== 0 },
+        { name: "M", available: true },
+        { name: "L", available: true },
+        { name: "XL", available: i % 4 !== 0 },
+        { name: "XXL", available: i % 2 === 0 },
+      ],
+      colors: toColors(colors),
+      isNew: i < 4,
+      isSale: i % 4 === 0,
+    } as Product;
+  }),
 
   // ============================================
-  // 👔 РУБАШКИ (shirts)
+  // 👔 РУБАШКИ (shirts) — 20 товаров
+  // 🖼️ Фото: public/images/products/shirts/shirt-{N}/{color}/front|side|back.jpg
   // ============================================
-  ...Array.from({ length: 20 }, (_, i) => ({
-    id: `shirt-${i + 1}`,
-    name: `Рубашка ${["классическая", "casual", "льняная", "slim fit", "oxford"][i % 5]} ${i + 1}`,
-    price: 3990 + (i % 5) * 500,
-    originalPrice: i % 3 === 0 ? 5490 + (i % 5) * 500 : undefined,
-    category: "shirts",
-    subcategory: ["classic-shirts", "casual-shirts", "linen-shirts"][i % 3],
-    season: ["spring", "summer", "autumn"][i % 3],
-    brand: ["PASHE Original", "Classic Edition", "Premium Line"][i % 3],
-    description: "Элегантная рубашка для офиса и повседневной носки. Качественная ткань, безупречный крой.",
-    composition: i % 3 === 2 ? "100% лён" : "100% хлопок",
-    care: "Машинная стирка при 40°C, гладить при средней температуре",
-    country: "Португалия",
-    // 🖼️ ЗАМЕНИТЕ ИЗОБРАЖЕНИЯ НИЖЕ НА СВОИ
-    images: [
-      `https://images.unsplash.com/photo-1602810318383-e386cc2a3ccf?w=800&h=1000&fit=crop`,
-      `https://images.unsplash.com/photo-1596755094514-f87e34085b2c?w=800&h=1000&fit=crop`,
-      `https://images.unsplash.com/photo-1607345366928-199ea26cfe3e?w=800&h=1000&fit=crop`,
-    ],
-    sizes: [
-      { name: "S", available: true },
-      { name: "M", available: true },
-      { name: "L", available: i % 2 === 0 },
-      { name: "XL", available: i % 3 !== 0 },
-      { name: "XXL", available: i % 4 === 0 },
-    ],
-    colors: [
-      { name: "Белый", hex: "#FFFFFF" },
-      { name: "Голубой", hex: "#87CEEB" },
-      { name: "Розовый", hex: "#FFB6C1" },
-    ],
-    isNew: i < 3,
-    isSale: i % 3 === 0,
-  })),
+  ...Array.from({ length: 20 }, (_, i) => {
+    const id = `shirt-${i + 1}`;
+    const colors = COLOR_SETS.shirts;
+    return {
+      id,
+      name: NAMES.shirts[i],
+      price: [3990, 4490, 4990, 3690, 5490, 4190, 3490, 5990, 4290, 3890, 5190, 4690, 3590, 4390, 3790, 5790, 4090, 6490, 4890, 5290][i],
+      originalPrice: i % 3 === 0 ? [3990, 4490, 4990, 3690, 5490, 4190, 3490, 5990, 4290, 3890, 5190, 4690, 3590, 4390, 3790, 5790, 4090, 6490, 4890, 5290][i] + 1500 : undefined,
+      category: "shirts",
+      subcategory: ["classic-shirts", "casual-shirts", "linen-shirts"][i % 3],
+      season: ["spring", "summer", "autumn"][i % 3] as string,
+      brand: ["PASHE Original", "Classic Edition", "Premium Line"][i % 3],
+      description: "Элегантная рубашка для офиса и повседневной носки. Качественная ткань, безупречный крой.",
+      composition: i % 3 === 2 ? "100% лён" : "100% хлопок",
+      care: "Машинная стирка при 40°C, гладить при средней температуре",
+      country: "Португалия",
+      colorImages: ci("shirts", id, colors),
+      images: pi("shirts", id, colors[0].folder),
+      sizes: [
+        { name: "S", available: true },
+        { name: "M", available: true },
+        { name: "L", available: i % 2 === 0 },
+        { name: "XL", available: i % 3 !== 0 },
+        { name: "XXL", available: i % 4 === 0 },
+      ],
+      colors: toColors(colors),
+      isNew: i < 3,
+      isSale: i % 3 === 0,
+    } as Product;
+  }),
 
   // ============================================
-  // 👖 БРЮКИ (pants)
+  // 👖 БРЮКИ (pants) — 20 товаров
+  // 🖼️ Фото: public/images/products/pants/pants-{N}/{color}/front|side|back.jpg
   // ============================================
-  ...Array.from({ length: 20 }, (_, i) => ({
-    id: `pants-${i + 1}`,
-    name: `${["Брюки классические", "Чиносы", "Джоггеры", "Брюки cargo", "Брюки slim"][i % 5]} ${i + 1}`,
-    price: 4990 + (i % 5) * 500,
-    originalPrice: i % 4 === 0 ? 6990 + (i % 5) * 500 : undefined,
-    category: "pants",
-    subcategory: ["classic-pants", "chinos", "joggers"][i % 3],
-    season: ["spring", "autumn", "winter"][i % 3],
-    brand: ["PASHE Original", "Urban Style", "Classic Edition"][i % 3],
-    description: "Удобные брюки на каждый день. Качественная ткань, современный крой.",
-    composition: "98% хлопок, 2% эластан",
-    care: "Машинная стирка при 30°C",
-    country: "Турция",
-    // 🖼️ ЗАМЕНИТЕ ИЗОБРАЖЕНИЯ НИЖЕ НА СВОИ
-    images: [
-      `https://images.unsplash.com/photo-1624378439575-d8705ad7ae80?w=800&h=1000&fit=crop`,
-      `https://images.unsplash.com/photo-1473966968600-fa801b869a1a?w=800&h=1000&fit=crop`,
-      `https://images.unsplash.com/photo-1506629082955-511b1aa562c8?w=800&h=1000&fit=crop`,
-    ],
-    sizes: [
-      { name: "28", available: i % 3 !== 0 },
-      { name: "30", available: true },
-      { name: "32", available: true },
-      { name: "34", available: i % 2 === 0 },
-      { name: "36", available: i % 4 !== 0 },
-    ],
-    colors: [
-      { name: "Чёрный", hex: "#1A1A1A" },
-      { name: "Бежевый", hex: "#C4A77D" },
-      { name: "Хаки", hex: "#5B5B3E" },
-    ],
-    isNew: i < 4,
-    isSale: i % 4 === 0,
-  })),
+  ...Array.from({ length: 20 }, (_, i) => {
+    const id = `pants-${i + 1}`;
+    const colors = COLOR_SETS.pants;
+    return {
+      id,
+      name: NAMES.pants[i],
+      price: [4990, 5490, 5990, 4690, 6490, 4190, 3990, 7490, 8990, 4290, 5190, 3690, 6190, 5790, 4590, 5390, 3890, 4790, 6790, 5090][i],
+      originalPrice: i % 4 === 0 ? [4990, 5490, 5990, 4690, 6490, 4190, 3990, 7490, 8990, 4290, 5190, 3690, 6190, 5790, 4590, 5390, 3890, 4790, 6790, 5090][i] + 2000 : undefined,
+      category: "pants",
+      subcategory: ["classic-pants", "chinos", "joggers"][i % 3],
+      season: ["spring", "autumn", "winter"][i % 3] as string,
+      brand: ["PASHE Original", "Urban Style", "Classic Edition"][i % 3],
+      description: "Удобные брюки на каждый день. Качественная ткань, современный крой.",
+      composition: "98% хлопок, 2% эластан",
+      care: "Машинная стирка при 30°C",
+      country: "Турция",
+      colorImages: ci("pants", id, colors),
+      images: pi("pants", id, colors[0].folder),
+      sizes: [
+        { name: "28", available: i % 3 !== 0 },
+        { name: "30", available: true },
+        { name: "32", available: true },
+        { name: "34", available: i % 2 === 0 },
+        { name: "36", available: i % 4 !== 0 },
+      ],
+      colors: toColors(colors),
+      isNew: i < 4,
+      isSale: i % 4 === 0,
+    } as Product;
+  }),
 
   // ============================================
-  // 👖 ДЖИНСЫ (jeans)
+  // 👖 ДЖИНСЫ (jeans) — 20 товаров
+  // 🖼️ Фото: public/images/products/jeans/jeans-{N}/{color}/front|side|back.jpg
   // ============================================
-  ...Array.from({ length: 20 }, (_, i) => ({
-    id: `jeans-${i + 1}`,
-    name: `Джинсы ${["slim fit", "straight", "relaxed", "skinny", "regular"][i % 5]} ${i + 1}`,
-    price: 5990 + (i % 5) * 500,
-    originalPrice: i % 3 === 0 ? 7990 + (i % 5) * 500 : undefined,
-    category: "jeans",
-    subcategory: ["slim-jeans", "straight-jeans", "relaxed-jeans"][i % 3],
-    season: "all",
-    brand: ["PASHE Original", "Urban Style", "Premium Line"][i % 3],
-    description: "Классические джинсы из качественного денима. Удобная посадка, долговечность.",
-    composition: "99% хлопок, 1% эластан",
-    care: "Машинная стирка при 30°C, вывернуть наизнанку",
-    country: "Турция",
-    // 🖼️ ЗАМЕНИТЕ ИЗОБРАЖЕНИЯ НИЖЕ НА СВОИ
-    images: [
-      `https://images.unsplash.com/photo-1542272604-787c3835535d?w=800&h=1000&fit=crop`,
-      `https://images.unsplash.com/photo-1541099649105-f69ad21f3246?w=800&h=1000&fit=crop`,
-      `https://images.unsplash.com/photo-1555689502-c4b22d76c56f?w=800&h=1000&fit=crop`,
-    ],
-    sizes: [
-      { name: "28", available: i % 4 !== 0 },
-      { name: "30", available: true },
-      { name: "32", available: true },
-      { name: "34", available: i % 3 === 0 },
-      { name: "36", available: i % 2 === 0 },
-    ],
-    colors: [
-      { name: "Синий", hex: "#4169E1" },
-      { name: "Тёмно-синий", hex: "#191970" },
-      { name: "Чёрный", hex: "#1A1A1A" },
-      { name: "Белый", hex: "#FFFFFF" },
-    ],
-    isNew: i < 3,
-    isSale: i % 3 === 0,
-  })),
+  ...Array.from({ length: 20 }, (_, i) => {
+    const id = `jeans-${i + 1}`;
+    const colors = COLOR_SETS.jeans;
+    return {
+      id,
+      name: NAMES.jeans[i],
+      price: [5990, 6490, 7490, 5490, 6990, 8490, 7990, 9990, 5790, 6290, 11990, 6790, 5190, 7290, 8990, 6190, 14990, 7790, 8490, 5390][i],
+      originalPrice: i % 3 === 0 ? [5990, 6490, 7490, 5490, 6990, 8490, 7990, 9990, 5790, 6290, 11990, 6790, 5190, 7290, 8990, 6190, 14990, 7790, 8490, 5390][i] + 2000 : undefined,
+      category: "jeans",
+      subcategory: ["slim-jeans", "straight-jeans", "relaxed-jeans"][i % 3],
+      season: "all" as string,
+      brand: ["PASHE Original", "Urban Style", "Premium Line"][i % 3],
+      description: "Классические джинсы из качественного денима. Удобная посадка, долговечность.",
+      composition: "99% хлопок, 1% эластан",
+      care: "Машинная стирка при 30°C, вывернуть наизнанку",
+      country: "Турция",
+      colorImages: ci("jeans", id, colors),
+      images: pi("jeans", id, colors[0].folder),
+      sizes: [
+        { name: "28", available: i % 4 !== 0 },
+        { name: "30", available: true },
+        { name: "32", available: true },
+        { name: "34", available: i % 3 === 0 },
+        { name: "36", available: i % 2 === 0 },
+      ],
+      colors: toColors(colors),
+      isNew: i < 3,
+      isSale: i % 3 === 0,
+    } as Product;
+  }),
 
   // ============================================
-  // 🩳 ШОРТЫ (shorts)
+  // 🩳 ШОРТЫ (shorts) — 20 товаров
+  // 🖼️ Фото: public/images/products/shorts/shorts-{N}/{color}/front|side|back.jpg
   // ============================================
-  ...Array.from({ length: 20 }, (_, i) => ({
-    id: `shorts-${i + 1}`,
-    name: `Шорты ${["casual", "спортивные", "джинсовые", "cargo", "пляжные"][i % 5]} ${i + 1}`,
-    price: 2490 + (i % 5) * 300,
-    originalPrice: i % 4 === 0 ? 3490 + (i % 5) * 300 : undefined,
-    category: "shorts",
-    subcategory: ["casual-shorts", "sport-shorts", "denim-shorts"][i % 3],
-    season: "summer",
-    brand: ["PASHE Original", "Sport Collection", "Urban Style"][i % 3],
-    description: "Удобные шорты для лета. Лёгкая ткань, комфортная посадка.",
-    composition: "100% хлопок",
-    care: "Машинная стирка при 30°C",
-    country: "Турция",
-    // 🖼️ ЗАМЕНИТЕ ИЗОБРАЖЕНИЯ НИЖЕ НА СВОИ
-    images: [
-      `https://images.unsplash.com/photo-1591195853828-11db59a44f6b?w=800&h=1000&fit=crop`,
-      `https://images.unsplash.com/photo-1517438476312-10d79c077509?w=800&h=1000&fit=crop`,
-      `https://images.unsplash.com/photo-1562157873-818bc0726f68?w=800&h=1000&fit=crop`,
-    ],
-    sizes: [
-      { name: "S", available: true },
-      { name: "M", available: true },
-      { name: "L", available: i % 2 === 0 },
-      { name: "XL", available: i % 3 !== 0 },
-    ],
-    colors: [
-      { name: "Бежевый", hex: "#C4A77D" },
-      { name: "Синий", hex: "#4169E1" },
-      { name: "Хаки", hex: "#5B5B3E" },
-    ],
-    isNew: i < 5,
-    isSale: i % 4 === 0,
-  })),
+  ...Array.from({ length: 20 }, (_, i) => {
+    const id = `shorts-${i + 1}`;
+    const colors = COLOR_SETS.shorts;
+    return {
+      id,
+      name: NAMES.shorts[i],
+      price: [2490, 2990, 3490, 3990, 2790, 2190, 3290, 1990, 3790, 4490, 2390, 3190, 2690, 2890, 3090, 1890, 2590, 3390, 3690, 2090][i],
+      originalPrice: i % 4 === 0 ? [2490, 2990, 3490, 3990, 2790, 2190, 3290, 1990, 3790, 4490, 2390, 3190, 2690, 2890, 3090, 1890, 2590, 3390, 3690, 2090][i] + 1000 : undefined,
+      category: "shorts",
+      subcategory: ["casual-shorts", "sport-shorts", "denim-shorts"][i % 3],
+      season: "summer" as string,
+      brand: ["PASHE Original", "Sport Collection", "Urban Style"][i % 3],
+      description: "Удобные шорты для лета. Лёгкая ткань, комфортная посадка.",
+      composition: "100% хлопок",
+      care: "Машинная стирка при 30°C",
+      country: "Турция",
+      colorImages: ci("shorts", id, colors),
+      images: pi("shorts", id, colors[0].folder),
+      sizes: [
+        { name: "S", available: true },
+        { name: "M", available: true },
+        { name: "L", available: i % 2 === 0 },
+        { name: "XL", available: i % 3 !== 0 },
+      ],
+      colors: toColors(colors),
+      isNew: i < 5,
+      isSale: i % 4 === 0,
+    } as Product;
+  }),
 
   // ============================================
-  // 🧥 СВИТШОТЫ (sweatshirts)
+  // 🧥 СВИТШОТЫ (sweatshirts) — 20 товаров
+  // 🖼️ Фото: public/images/products/sweatshirts/sweatshirt-{N}/{color}/front|side|back.jpg
   // ============================================
-  ...Array.from({ length: 20 }, (_, i) => ({
-    id: `sweatshirt-${i + 1}`,
-    name: `Свитшот ${["базовый", "с принтом", "оверсайз", "premium", "vintage"][i % 5]} ${i + 1}`,
-    price: 3990 + (i % 5) * 500,
-    originalPrice: i % 3 === 0 ? 5490 + (i % 5) * 500 : undefined,
-    category: "sweatshirts",
-    subcategory: ["basic-sweatshirts", "print-sweatshirts"][i % 2],
-    season: ["autumn", "winter", "spring"][i % 3],
-    brand: ["PASHE Original", "Urban Style", "Premium Line"][i % 3],
-    description: "Мягкий свитшот из хлопкового трикотажа. Комфортный крой для повседневной носки.",
-    composition: "80% хлопок, 20% полиэстер",
-    care: "Машинная стирка при 30°C",
-    country: "Португалия",
-    // 🖼️ ЗАМЕНИТЕ ИЗОБРАЖЕНИЯ НИЖЕ НА СВОИ
-    images: [
-      `https://images.unsplash.com/photo-1556821840-3a63f95609a7?w=800&h=1000&fit=crop`,
-      `https://images.unsplash.com/photo-1578768079052-aa76e52ff62e?w=800&h=1000&fit=crop`,
-      `https://images.unsplash.com/photo-1614975059251-992f11792b9f?w=800&h=1000&fit=crop`,
-    ],
-    sizes: [
-      { name: "S", available: i % 3 !== 0 },
-      { name: "M", available: true },
-      { name: "L", available: true },
-      { name: "XL", available: i % 2 === 0 },
-      { name: "XXL", available: i % 4 !== 0 },
-    ],
-    colors: [
-      { name: "Чёрный", hex: "#1A1A1A" },
-      { name: "Серый", hex: "#6B7280" },
-      { name: "Бежевый", hex: "#C4A77D" },
-    ],
-    isNew: i < 4,
-    isSale: i % 3 === 0,
-  })),
+  ...Array.from({ length: 20 }, (_, i) => {
+    const id = `sweatshirt-${i + 1}`;
+    const colors = COLOR_SETS.sweatshirts;
+    return {
+      id,
+      name: NAMES.sweatshirts[i],
+      price: [3990, 4490, 4990, 5490, 3690, 5990, 4190, 3490, 4790, 4290, 3890, 3290, 5190, 4690, 5790, 3590, 6490, 4090, 4390, 5090][i],
+      originalPrice: i % 3 === 0 ? [3990, 4490, 4990, 5490, 3690, 5990, 4190, 3490, 4790, 4290, 3890, 3290, 5190, 4690, 5790, 3590, 6490, 4090, 4390, 5090][i] + 1500 : undefined,
+      category: "sweatshirts",
+      subcategory: ["basic-sweatshirts", "print-sweatshirts"][i % 2],
+      season: ["autumn", "winter", "spring"][i % 3] as string,
+      brand: ["PASHE Original", "Urban Style", "Premium Line"][i % 3],
+      description: "Мягкий свитшот из хлопкового трикотажа. Комфортный крой для повседневной носки.",
+      composition: "80% хлопок, 20% полиэстер",
+      care: "Машинная стирка при 30°C",
+      country: "Португалия",
+      colorImages: ci("sweatshirts", id, colors),
+      images: pi("sweatshirts", id, colors[0].folder),
+      sizes: [
+        { name: "S", available: i % 3 !== 0 },
+        { name: "M", available: true },
+        { name: "L", available: true },
+        { name: "XL", available: i % 2 === 0 },
+        { name: "XXL", available: i % 4 !== 0 },
+      ],
+      colors: toColors(colors),
+      isNew: i < 4,
+      isSale: i % 3 === 0,
+    } as Product;
+  }),
 
   // ============================================
-  // 👕 ПОЛО (polo)
+  // 👕 ПОЛО (polo) — 20 товаров
+  // 🖼️ Фото: public/images/products/polo/polo-{N}/{color}/front|side|back.jpg
   // ============================================
-  ...Array.from({ length: 20 }, (_, i) => ({
-    id: `polo-${i + 1}`,
-    name: `Поло ${["классическое", "спортивное", "premium", "slim fit", "oversized"][i % 5]} ${i + 1}`,
-    price: 2990 + (i % 5) * 400,
-    originalPrice: i % 4 === 0 ? 4490 + (i % 5) * 400 : undefined,
-    category: "polo",
-    subcategory: ["classic-polo", "sport-polo"][i % 2],
-    season: ["summer", "spring"][i % 2],
-    brand: ["PASHE Original", "Sport Collection", "Classic Edition"][i % 3],
-    description: "Элегантное поло из хлопка пике. Классический воротник, качественное исполнение.",
-    composition: "100% хлопок пике",
-    care: "Машинная стирка при 30°C",
-    country: "Турция",
-    // 🖼️ ЗАМЕНИТЕ ИЗОБРАЖЕНИЯ НИЖЕ НА СВОИ
-    images: [
-      `https://images.unsplash.com/photo-1625910513413-5fc41ef81b18?w=800&h=1000&fit=crop`,
-      `https://images.unsplash.com/photo-1586363104862-3a5e2ab60d99?w=800&h=1000&fit=crop`,
-      `https://images.unsplash.com/photo-1598032895397-b9472444bf93?w=800&h=1000&fit=crop`,
-    ],
-    sizes: [
-      { name: "S", available: true },
-      { name: "M", available: true },
-      { name: "L", available: i % 2 === 0 },
-      { name: "XL", available: i % 3 !== 0 },
-      { name: "XXL", available: i % 4 === 0 },
-    ],
-    colors: [
-      { name: "Белый", hex: "#FFFFFF" },
-      { name: "Тёмно-синий", hex: "#191970" },
-      { name: "Бордовый", hex: "#800020" },
-    ],
-    isNew: i < 3,
-    isSale: i % 4 === 0,
-  })),
+  ...Array.from({ length: 20 }, (_, i) => {
+    const id = `polo-${i + 1}`;
+    const colors = COLOR_SETS.polo;
+    return {
+      id,
+      name: NAMES.polo[i],
+      price: [2990, 3490, 2790, 3990, 3290, 3190, 4490, 3690, 2890, 3890, 2590, 3090, 4190, 3590, 4790, 2690, 4990, 3790, 5490, 3390][i],
+      originalPrice: i % 4 === 0 ? [2990, 3490, 2790, 3990, 3290, 3190, 4490, 3690, 2890, 3890, 2590, 3090, 4190, 3590, 4790, 2690, 4990, 3790, 5490, 3390][i] + 1000 : undefined,
+      category: "polo",
+      subcategory: ["classic-polo", "sport-polo"][i % 2],
+      season: ["summer", "spring"][i % 2] as string,
+      brand: ["PASHE Original", "Sport Collection", "Classic Edition"][i % 3],
+      description: "Элегантное поло из хлопка пике. Классический воротник, качественное исполнение.",
+      composition: "100% хлопок пике",
+      care: "Машинная стирка при 30°C",
+      country: "Турция",
+      colorImages: ci("polo", id, colors),
+      images: pi("polo", id, colors[0].folder),
+      sizes: [
+        { name: "S", available: true },
+        { name: "M", available: true },
+        { name: "L", available: i % 2 === 0 },
+        { name: "XL", available: i % 3 !== 0 },
+        { name: "XXL", available: i % 4 === 0 },
+      ],
+      colors: toColors(colors),
+      isNew: i < 3,
+      isSale: i % 4 === 0,
+    } as Product;
+  }),
 
   // ============================================
-  // 👟 ОБУВЬ (shoes)
+  // 👟 ОБУВЬ (shoes) — 20 товаров
+  // 🖼️ Фото: public/images/products/shoes/shoes-{N}/{color}/front|side|back.jpg
   // ============================================
-  ...Array.from({ length: 20 }, (_, i) => ({
-    id: `shoes-${i + 1}`,
-    name: `${["Кроссовки", "Ботинки", "Лоферы", "Кеды", "Мокасины"][i % 5]} ${i + 1}`,
-    price: 7990 + (i % 5) * 1000,
-    originalPrice: i % 3 === 0 ? 10990 + (i % 5) * 1000 : undefined,
-    category: "shoes",
-    subcategory: ["sneakers", "boots", "loafers", "sneakers", "loafers"][i % 5],
-    season: ["all", "winter", "summer", "all", "summer"][i % 5],
-    brand: ["PASHE Original", "Premium Line", "Urban Style"][i % 3],
-    description: "Стильная обувь из качественных материалов. Удобная колодка, долговечность.",
-    composition: "Верх: натуральная кожа, Подошва: резина",
-    care: "Чистить влажной тканью, использовать крем для обуви",
-    country: "Италия",
-    // 🖼️ ЗАМЕНИТЕ ИЗОБРАЖЕНИЯ НИЖЕ НА СВОИ
-    images: [
-      `https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=800&h=1000&fit=crop`,
-      `https://images.unsplash.com/photo-1460353581641-37baddab0fa2?w=800&h=1000&fit=crop`,
-      `https://images.unsplash.com/photo-1549298916-b41d501d3772?w=800&h=1000&fit=crop`,
-    ],
-    sizes: [
-      { name: "40", available: i % 3 !== 0 },
-      { name: "41", available: true },
-      { name: "42", available: true },
-      { name: "43", available: i % 2 === 0 },
-      { name: "44", available: i % 4 !== 0 },
-      { name: "45", available: i % 3 === 0 },
-    ],
-    colors: [
-      { name: "Чёрный", hex: "#1A1A1A" },
-      { name: "Белый", hex: "#FFFFFF" },
-      { name: "Коричневый", hex: "#8B4513" },
-    ],
-    isNew: i < 4,
-    isSale: i % 3 === 0,
-  })),
+  ...Array.from({ length: 20 }, (_, i) => {
+    const id = `shoes-${i + 1}`;
+    const colors = COLOR_SETS.shoes;
+    return {
+      id,
+      name: NAMES.shoes[i],
+      price: [7990, 12990, 9990, 6990, 11990, 4990, 14990, 13990, 5990, 8990, 16990, 7490, 9490, 5490, 15990, 3990, 19990, 8490, 10990, 17990][i],
+      originalPrice: i % 3 === 0 ? [7990, 12990, 9990, 6990, 11990, 4990, 14990, 13990, 5990, 8990, 16990, 7490, 9490, 5490, 15990, 3990, 19990, 8490, 10990, 17990][i] + 3000 : undefined,
+      category: "shoes",
+      subcategory: ["sneakers", "boots", "loafers", "sneakers", "boots"][i % 5],
+      season: ["all", "winter", "summer", "all", "winter"][i % 5] as string,
+      brand: ["PASHE Original", "Premium Line", "Urban Style"][i % 3],
+      description: "Стильная обувь из качественных материалов. Удобная колодка, долговечность.",
+      composition: "Верх: натуральная кожа, Подошва: резина",
+      care: "Чистить влажной тканью, использовать крем для обуви",
+      country: "Италия",
+      colorImages: ci("shoes", id, colors),
+      images: pi("shoes", id, colors[0].folder),
+      sizes: [
+        { name: "40", available: i % 3 !== 0 },
+        { name: "41", available: true },
+        { name: "42", available: true },
+        { name: "43", available: i % 2 === 0 },
+        { name: "44", available: i % 4 !== 0 },
+        { name: "45", available: i % 3 === 0 },
+      ],
+      colors: toColors(colors),
+      isNew: i < 4,
+      isSale: i % 3 === 0,
+    } as Product;
+  }),
 
   // ============================================
-  // 🎒 АКСЕССУАРЫ (accessories)
+  // 🎒 АКСЕССУАРЫ (accessories) — 20 товаров
+  // 🖼️ Фото: public/images/products/accessories/accessory-{N}/{color}/front|side|back.jpg
   // ============================================
-  ...Array.from({ length: 20 }, (_, i) => ({
-    id: `accessory-${i + 1}`,
-    name: `${["Ремень", "Сумка", "Кошелёк", "Шарф", "Очки"][i % 5]} ${i + 1}`,
-    price: 1990 + (i % 5) * 500,
-    originalPrice: i % 4 === 0 ? 2990 + (i % 5) * 500 : undefined,
-    category: "accessories",
-    subcategory: ["belts", "bags", "wallets", "scarves", "sunglasses"][i % 5],
-    season: "all",
-    brand: ["PASHE Original", "Premium Line", "Classic Edition"][i % 3],
-    description: "Стильный аксессуар из качественных материалов. Дополнит любой образ.",
-    composition: "Натуральная кожа",
-    care: "Избегать попадания влаги",
-    country: "Италия",
-    // 🖼️ ЗАМЕНИТЕ ИЗОБРАЖЕНИЯ НИЖЕ НА СВОИ
-    images: [
-      `https://images.unsplash.com/photo-1553062407-98eeb64c6a62?w=800&h=1000&fit=crop`,
-      `https://images.unsplash.com/photo-1594223274512-ad4803739b7c?w=800&h=1000&fit=crop`,
-      `https://images.unsplash.com/photo-1606503825008-909a67e63c9d?w=800&h=1000&fit=crop`,
-    ],
-    sizes: [
-      { name: "ONE SIZE", available: true },
-    ],
-    colors: [
-      { name: "Чёрный", hex: "#1A1A1A" },
-      { name: "Коричневый", hex: "#8B4513" },
-      { name: "Тёмно-синий", hex: "#191970" },
-    ],
-    isNew: i < 5,
-    isSale: i % 4 === 0,
-  })),
+  ...Array.from({ length: 20 }, (_, i) => {
+    const id = `accessory-${i + 1}`;
+    const colors = COLOR_SETS.accessories;
+    return {
+      id,
+      name: NAMES.accessories[i],
+      price: [1990, 4990, 2990, 3490, 5990, 3990, 1490, 2490, 7990, 6990, 1290, 3290, 5490, 4490, 6490, 8990, 2790, 1790, 9990, 4290][i],
+      originalPrice: i % 4 === 0 ? [1990, 4990, 2990, 3490, 5990, 3990, 1490, 2490, 7990, 6990, 1290, 3290, 5490, 4490, 6490, 8990, 2790, 1790, 9990, 4290][i] + 1000 : undefined,
+      category: "accessories",
+      subcategory: ["belts", "bags", "wallets", "scarves", "sunglasses"][i % 5],
+      season: "all" as string,
+      brand: ["PASHE Original", "Premium Line", "Classic Edition"][i % 3],
+      description: "Стильный аксессуар из качественных материалов. Дополнит любой образ.",
+      composition: "Натуральная кожа",
+      care: "Избегать попадания влаги",
+      country: "Италия",
+      colorImages: ci("accessories", id, colors),
+      images: pi("accessories", id, colors[0].folder),
+      sizes: [{ name: "ONE SIZE", available: true }],
+      colors: toColors(colors),
+      isNew: i < 5,
+      isSale: i % 4 === 0,
+    } as Product;
+  }),
 
   // ============================================
-  // 🧢 КЕПКИ (caps)
+  // 🧢 КЕПКИ (caps) — 20 товаров
+  // 🖼️ Фото: public/images/products/caps/cap-{N}/{color}/front|side|back.jpg
   // ============================================
-  ...Array.from({ length: 20 }, (_, i) => ({
-    id: `cap-${i + 1}`,
-    name: `${["Бейсболка", "Шапка", "Панама", "Кепка", "Берет"][i % 5]} ${i + 1}`,
-    price: 1490 + (i % 5) * 300,
-    originalPrice: i % 3 === 0 ? 1990 + (i % 5) * 300 : undefined,
-    category: "caps",
-    subcategory: ["baseball-caps", "beanies", "panama-hats"][i % 3],
-    season: ["summer", "winter", "summer"][i % 3],
-    brand: ["PASHE Original", "Urban Style", "Sport Collection"][i % 3],
-    description: "Стильный головной убор для завершения образа.",
-    composition: "100% хлопок",
-    care: "Ручная стирка",
-    country: "Турция",
-    // 🖼️ ЗАМЕНИТЕ ИЗОБРАЖЕНИЯ НИЖЕ НА СВОИ
-    images: [
-      `https://images.unsplash.com/photo-1588850561407-ed78c282e89b?w=800&h=1000&fit=crop`,
-      `https://images.unsplash.com/photo-1521369909029-2afed882baee?w=800&h=1000&fit=crop`,
-      `https://images.unsplash.com/photo-1534215754734-18e55d13e346?w=800&h=1000&fit=crop`,
-    ],
-    sizes: [
-      { name: "S/M", available: true },
-      { name: "L/XL", available: i % 2 === 0 },
-    ],
-    colors: [
-      { name: "Чёрный", hex: "#1A1A1A" },
-      { name: "Белый", hex: "#FFFFFF" },
-      { name: "Бежевый", hex: "#C4A77D" },
-    ],
-    isNew: i < 4,
-    isSale: i % 3 === 0,
-  })),
+  ...Array.from({ length: 20 }, (_, i) => {
+    const id = `cap-${i + 1}`;
+    const colors = COLOR_SETS.caps;
+    return {
+      id,
+      name: NAMES.caps[i],
+      price: [1490, 1990, 2490, 1790, 2290, 2990, 1690, 1290, 1590, 2790, 2190, 1890, 3490, 1390, 1690, 1990, 1490, 2090, 2690, 2390][i],
+      originalPrice: i % 3 === 0 ? [1490, 1990, 2490, 1790, 2290, 2990, 1690, 1290, 1590, 2790, 2190, 1890, 3490, 1390, 1690, 1990, 1490, 2090, 2690, 2390][i] + 500 : undefined,
+      category: "caps",
+      subcategory: ["baseball-caps", "beanies", "panama-hats"][i % 3],
+      season: ["summer", "winter", "summer"][i % 3] as string,
+      brand: ["PASHE Original", "Urban Style", "Sport Collection"][i % 3],
+      description: "Стильный головной убор для завершения образа.",
+      composition: "100% хлопок",
+      care: "Ручная стирка",
+      country: "Турция",
+      colorImages: ci("caps", id, colors),
+      images: pi("caps", id, colors[0].folder),
+      sizes: [
+        { name: "S/M", available: true },
+        { name: "L/XL", available: i % 2 === 0 },
+      ],
+      colors: toColors(colors),
+      isNew: i < 4,
+      isSale: i % 3 === 0,
+    } as Product;
+  }),
 
   // ============================================
-  // 🤵 КОСТЮМЫ (suits)
+  // 🤵 КОСТЮМЫ (suits) — 20 товаров
+  // 🖼️ Фото: public/images/products/suits/suit-{N}/{color}/front|side|back.jpg
   // ============================================
-  ...Array.from({ length: 20 }, (_, i) => ({
-    id: `suit-${i + 1}`,
-    name: `Костюм ${["деловой", "повседневный", "свадебный", "premium", "slim fit"][i % 5]} ${i + 1}`,
-    price: 19990 + (i % 5) * 3000,
-    originalPrice: i % 4 === 0 ? 29990 + (i % 5) * 3000 : undefined,
-    category: "suits",
-    subcategory: ["business-suits", "casual-suits", "wedding-suits"][i % 3],
-    season: "all",
-    brand: ["PASHE Original", "Premium Line", "Classic Edition"][i % 3],
-    description: "Элегантный костюм из качественной ткани. Безупречный крой, современный силуэт.",
-    composition: "70% шерсть, 30% полиэстер",
-    care: "Сухая чистка",
-    country: "Италия",
-    // 🖼️ ЗАМЕНИТЕ ИЗОБРАЖЕНИЯ НИЖЕ НА СВОИ
-    images: [
-      `https://images.unsplash.com/photo-1594938298603-c8148c4dae35?w=800&h=1000&fit=crop`,
-      `https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=800&h=1000&fit=crop`,
-      `https://images.unsplash.com/photo-1593030761757-71fae45fa0e7?w=800&h=1000&fit=crop`,
-    ],
-    sizes: [
-      { name: "46", available: i % 3 !== 0 },
-      { name: "48", available: true },
-      { name: "50", available: true },
-      { name: "52", available: i % 2 === 0 },
-      { name: "54", available: i % 4 !== 0 },
-    ],
-    colors: [
-      { name: "Чёрный", hex: "#1A1A1A" },
-      { name: "Тёмно-синий", hex: "#191970" },
-      { name: "Серый", hex: "#6B7280" },
-    ],
-    isNew: i < 3,
-    isSale: i % 4 === 0,
-  })),
+  ...Array.from({ length: 20 }, (_, i) => {
+    const id = `suit-${i + 1}`;
+    const colors = COLOR_SETS.suits;
+    return {
+      id,
+      name: NAMES.suits[i],
+      price: [19990, 24990, 29990, 14990, 34990, 22990, 17990, 39990, 44990, 27990, 21990, 18990, 32990, 26990, 23990, 28990, 49990, 15990, 25990, 21490][i],
+      originalPrice: i % 4 === 0 ? [19990, 24990, 29990, 14990, 34990, 22990, 17990, 39990, 44990, 27990, 21990, 18990, 32990, 26990, 23990, 28990, 49990, 15990, 25990, 21490][i] + 10000 : undefined,
+      category: "suits",
+      subcategory: ["business-suits", "casual-suits", "wedding-suits"][i % 3],
+      season: "all" as string,
+      brand: ["PASHE Original", "Premium Line", "Classic Edition"][i % 3],
+      description: "Элегантный костюм из качественной ткани. Безупречный крой, современный силуэт.",
+      composition: "70% шерсть, 30% полиэстер",
+      care: "Сухая чистка",
+      country: "Италия",
+      colorImages: ci("suits", id, colors),
+      images: pi("suits", id, colors[0].folder),
+      sizes: [
+        { name: "46", available: i % 3 !== 0 },
+        { name: "48", available: true },
+        { name: "50", available: true },
+        { name: "52", available: i % 2 === 0 },
+        { name: "54", available: i % 4 !== 0 },
+      ],
+      colors: toColors(colors),
+      isNew: i < 3,
+      isSale: i % 4 === 0,
+    } as Product;
+  }),
 ];
 
 // ============================================
@@ -504,12 +678,11 @@ export const getSaleProducts = (): Product[] => {
   return products.filter((p) => p.isSale);
 };
 
-// Функция поиска товаров
 export const searchProducts = (query: string): Product[] => {
   const searchTerm = query.toLowerCase().trim();
   if (!searchTerm) return [];
-  
-  return products.filter((p) => 
+
+  return products.filter((p) =>
     p.name.toLowerCase().includes(searchTerm) ||
     p.brand.toLowerCase().includes(searchTerm) ||
     p.category.toLowerCase().includes(searchTerm) ||
