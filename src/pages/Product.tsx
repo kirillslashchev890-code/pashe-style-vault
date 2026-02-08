@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/collapsible";
 import ImageLightbox from "@/components/product/ImageLightbox";
 import AuthModal from "@/components/auth/AuthModal";
+import { useAuth } from "@/hooks/useAuth";
 
 const Product = () => {
   const { id } = useParams();
@@ -24,9 +25,7 @@ const Product = () => {
   const [deliveryOpen, setDeliveryOpen] = useState(false);
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [authModalOpen, setAuthModalOpen] = useState(false);
-  
-  // TODO: Заменить на реальную проверку авторизации
-  const [isLoggedIn] = useState(false);
+  const { user } = useAuth();
 
   // Find product by ID or use first product as fallback
   const product = getProductById(id || "") || products[0];
@@ -224,11 +223,11 @@ const Product = () => {
                 className="flex-1 btn-gold py-6"
                 disabled={!selectedSize}
                 onClick={() => {
-                  if (!isLoggedIn) {
+                  if (!user) {
                     setAuthModalOpen(true);
                     return;
                   }
-                  // TODO: Добавить логику добавления в корзину
+                  // TODO: Добавить логику добавления в корзину через БД
                   console.log("Добавлено в корзину:", product.id, selectedSize, selectedColor);
                 }}
               >
@@ -240,11 +239,11 @@ const Product = () => {
                 variant="outline"
                 className="w-14 h-14 p-0"
                 onClick={() => {
-                  if (!isLoggedIn) {
+                  if (!user) {
                     setAuthModalOpen(true);
                     return;
                   }
-                  // TODO: Добавить логику добавления в избранное
+                  // TODO: Добавить логику добавления в избранное через БД
                   console.log("Добавлено в избранное:", product.id);
                 }}
               >
