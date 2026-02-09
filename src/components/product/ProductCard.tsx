@@ -4,6 +4,7 @@ import { Heart } from "lucide-react";
 import { Product } from "@/data/products";
 import AuthModal from "@/components/auth/AuthModal";
 import { useAuth } from "@/hooks/useAuth";
+import { useWishlist } from "@/hooks/useWishlist";
 
 interface ProductCardProps {
   product: Product;
@@ -12,6 +13,7 @@ interface ProductCardProps {
 const ProductCard = ({ product }: ProductCardProps) => {
   const [authModalOpen, setAuthModalOpen] = useState(false);
   const { user } = useAuth();
+  const { isInWishlist, toggleWishlist } = useWishlist();
 
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat("ru-RU", {
@@ -56,12 +58,13 @@ const ProductCard = ({ product }: ProductCardProps) => {
               setAuthModalOpen(true);
               return;
             }
-            // TODO: Добавить логику добавления в избранное через БД
-            console.log("Добавлено в избранное:", product.id);
+            toggleWishlist(product.id);
           }}
-          className="absolute top-3 right-3 w-9 h-9 rounded-full bg-background/80 backdrop-blur-sm flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-primary hover:text-primary-foreground"
+          className={`absolute top-3 right-3 w-9 h-9 rounded-full bg-background/80 backdrop-blur-sm flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-primary hover:text-primary-foreground ${
+            isInWishlist(product.id) ? "!opacity-100 text-destructive" : ""
+          }`}
         >
-          <Heart size={18} />
+          <Heart size={18} fill={isInWishlist(product.id) ? "currentColor" : "none"} />
         </button>
         
         {/* Quick sizes */}

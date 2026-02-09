@@ -1,28 +1,20 @@
-import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import Layout from "@/components/layout/Layout";
 import { Button } from "@/components/ui/button";
 import { motion } from "framer-motion";
 import { Trash2, Minus, Plus, ShoppingBag, ArrowRight } from "lucide-react";
-
-// ============================================
-// 🛒 КОРЗИНА - ПУСТАЯ ПО УМОЛЧАНИЮ
-// Товары добавляются только после авторизации
-// ============================================
-
-export interface CartItem {
-  id: string;
-  name: string;
-  price: number;
-  image: string;
-  size: string;
-  color?: string;
-  quantity: number;
-}
+import { useCart } from "@/hooks/useCart";
+import { useOrders } from "@/hooks/useOrders";
+import { useAuth } from "@/hooks/useAuth";
+import { toast } from "sonner";
+import { useState } from "react";
 
 const Cart = () => {
-  // Корзина пуста по умолчанию - товары добавляются через контекст/стейт
-  const [cartItems, setCartItems] = useState<CartItem[]>([]);
+  const { items, isLoading, removeFromCart, updateQuantity, clearCart, subtotal } = useCart();
+  const { createOrder } = useOrders();
+  const { user } = useAuth();
+  const navigate = useNavigate();
+  const [isOrdering, setIsOrdering] = useState(false);
 
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat("ru-RU", {
@@ -32,28 +24,38 @@ const Cart = () => {
     }).format(price);
   };
 
-  const updateQuantity = (id: string, newQuantity: number) => {
-    if (newQuantity < 1) return;
-    setCartItems(items =>
-      items.map(item =>
-        item.id === id ? { ...item, quantity: newQuantity } : item
-      )
-    );
-  };
-
-  const removeItem = (id: string) => {
-    setCartItems(items => items.filter(item => item.id !== id));
-  };
-
-  const subtotal = cartItems.reduce(
-    (sum, item) => sum + item.price * item.quantity,
-    0
-  );
   const shipping = subtotal >= 10000 ? 0 : 500;
   const total = subtotal + shipping;
 
-  // Пустая корзина
-  if (cartItems.length === 0) {
+  const handleCheckout = async () => {
+    if (!user) {
+      navigate("/account");
+      return;
+    }
+    setIsOrdering(true);
+    const { error } = await createOrder(items, total);
+    if (error) {
+      toast.error("Ошибка при оформлении заказа");
+      setIsOrdering(false);
+      return;
+    }
+    await clearCart();
+    toast.success("Заказ успешно оформлен!");
+    setIsOrdering(false);
+    navigate("/account");
+  };
+
+  if (isLoading) {
+    return (
+      <Layout>
+        <div className="container mx-auto px-4 py-16 md:py-24 text-center">
+          <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin mx-auto" />
+        </div>
+      </Layout>
+    );
+  }
+
+  if (items.length === 0) {
     return (
       <Layout>
         <div className="container mx-auto px-4 py-16 md:py-24">
@@ -93,9 +95,8 @@ const Cart = () => {
         </motion.h1>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Cart Items */}
           <div className="lg:col-span-2 space-y-4">
-            {cartItems.map((item, index) => (
+            {items.map((item, index) => (
               <motion.div
                 key={item.id}
                 initial={{ opacity: 0, y: 20 }}
@@ -103,24 +104,24 @@ const Cart = () => {
                 transition={{ delay: index * 0.1 }}
                 className="flex gap-4 p-4 bg-card rounded-2xl border border-border"
               >
-                <Link to={`/product/${item.id}`} className="shrink-0">
+                <Link to={`/product/${item.product_id}`} className="shrink-0">
                   <img
-                    src={item.image}
-                    alt={item.name}
-                    className="w-24 h-32 object-cover rounded-lg"
+                    src={item.product_image}
+                    alt={item.product_name}
+                    className="w-24 h-32 object-cover rounded-lg bg-secondary"
                   />
                 </Link>
                 <div className="flex-1 min-w-0">
-                  <Link to={`/product/${item.id}`}>
+                  <Link to={`/product/${item.product_id}`}>
                     <h3 className="font-medium hover:text-primary transition-colors">
-                      {item.name}
+                      {item.product_name}
                     </h3>
                   </Link>
                   <p className="text-muted-foreground text-sm mt-1">
                     Размер: {item.size}
-                    {item.color && ` • Цвет: ${item.color}`}
+                    {item.color_name && ` • Цвет: ${item.color_name}`}
                   </p>
-                  <p className="font-semibold mt-2">{formatPrice(item.price)}</p>
+                  <p className="font-semibold mt-2">{formatPrice(item.product_price)}</p>
                   
                   <div className="flex items-center justify-between mt-4">
                     <div className="flex items-center gap-2">
@@ -139,7 +140,7 @@ const Cart = () => {
                       </button>
                     </div>
                     <button
-                      onClick={() => removeItem(item.id)}
+                      onClick={() => removeFromCart(item.id)}
                       className="text-muted-foreground hover:text-destructive transition-colors"
                     >
                       <Trash2 size={18} />
@@ -150,7 +151,6 @@ const Cart = () => {
             ))}
           </div>
 
-          {/* Order Summary */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -162,7 +162,7 @@ const Cart = () => {
               
               <div className="space-y-4 mb-6">
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">Товары ({cartItems.length})</span>
+                  <span className="text-muted-foreground">Товары ({items.length})</span>
                   <span>{formatPrice(subtotal)}</span>
                 </div>
                 <div className="flex justify-between">
@@ -180,8 +180,12 @@ const Cart = () => {
                 </div>
               </div>
 
-              <Button className="w-full btn-gold py-6 mb-4">
-                Оформить заказ
+              <Button 
+                className="w-full btn-gold py-6 mb-4" 
+                onClick={handleCheckout}
+                disabled={isOrdering}
+              >
+                {isOrdering ? "Оформление..." : "Оформить заказ"}
               </Button>
 
               <Link to="/catalog">

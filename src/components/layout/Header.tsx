@@ -4,10 +4,12 @@ import { ShoppingBag, User, Menu, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import CategoryDrawer from "./CategoryDrawer";
 import SearchModal from "./SearchModal";
+import { useCart } from "@/hooks/useCart";
 
 const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const { itemCount } = useCart();
 
   return (
     <>
@@ -53,9 +55,11 @@ const Header = () => {
                   <ShoppingBag size={20} />
                 </Button>
                 {/* Счётчик корзины - обновляется динамически */}
-                <span className="absolute -top-1 -right-1 w-5 h-5 bg-primary text-primary-foreground text-xs font-semibold rounded-full flex items-center justify-center">
-                  0
-                </span>
+                {itemCount > 0 && (
+                  <span className="absolute -top-1 -right-1 w-5 h-5 bg-primary text-primary-foreground text-xs font-semibold rounded-full flex items-center justify-center">
+                    {itemCount}
+                  </span>
+                )}
               </Link>
             </div>
           </div>

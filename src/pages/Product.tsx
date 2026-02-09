@@ -1,9 +1,9 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useParams, Link } from "react-router-dom";
 import Layout from "@/components/layout/Layout";
 import { Button } from "@/components/ui/button";
 import { motion, AnimatePresence } from "framer-motion";
-import { Heart, ShoppingBag, Minus, Plus, ChevronLeft, Truck, RefreshCw, Shield, ChevronDown } from "lucide-react";
+import { Heart, ShoppingBag, Minus, Plus, ChevronLeft, Truck, RefreshCw, Shield, ChevronDown, Ruler } from "lucide-react";
 import { getProductById, products } from "@/data/products";
 import {
   Collapsible,
@@ -13,6 +13,9 @@ import {
 import ImageLightbox from "@/components/product/ImageLightbox";
 import AuthModal from "@/components/auth/AuthModal";
 import { useAuth } from "@/hooks/useAuth";
+import { useCart } from "@/hooks/useCart";
+import { useWishlist } from "@/hooks/useWishlist";
+import { supabase } from "@/integrations/supabase/client";
 
 const Product = () => {
   const { id } = useParams();
@@ -23,12 +26,30 @@ const Product = () => {
   const [compositionOpen, setCompositionOpen] = useState(false);
   const [careOpen, setCareOpen] = useState(false);
   const [deliveryOpen, setDeliveryOpen] = useState(false);
+  const [sizeGuideOpen, setSizeGuideOpen] = useState(false);
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [authModalOpen, setAuthModalOpen] = useState(false);
+  const [sizeGuideData, setSizeGuideData] = useState<any[]>([]);
   const { user } = useAuth();
+  const { addToCart } = useCart();
+  const { isInWishlist, toggleWishlist } = useWishlist();
 
   // Find product by ID or use first product as fallback
   const product = getProductById(id || "") || products[0];
+
+  // Fetch size guide data
+  useEffect(() => {
+    const fetchSizeGuide = async () => {
+      const categorySlug = product.category;
+      const { data } = await supabase
+        .from("size_guide")
+        .select("*")
+        .eq("category_slug", categorySlug)
+        .order("size");
+      if (data) setSizeGuideData(data);
+    };
+    fetchSizeGuide();
+  }, [product.category]);
 
   // Получаем изображения для выбранного цвета
   const currentImages = selectedColor && product.colorImages?.[selectedColor]
@@ -167,9 +188,13 @@ const Product = () => {
             <div className="mb-6">
               <div className="flex items-center justify-between mb-3">
                 <span className="font-medium">Размер</span>
-                <Link to="/size-guide" className="text-primary text-sm hover:underline">
+                <button 
+                  onClick={() => setSizeGuideOpen(!sizeGuideOpen)} 
+                  className="text-primary text-sm hover:underline flex items-center gap-1"
+                >
+                  <Ruler size={14} />
                   Таблица размеров
-                </Link>
+                </button>
               </div>
               <div className="flex flex-wrap gap-3">
                 {product.sizes.map((size) => (
@@ -227,8 +252,9 @@ const Product = () => {
                     setAuthModalOpen(true);
                     return;
                   }
-                  // TODO: Добавить логику добавления в корзину через БД
-                  console.log("Добавлено в корзину:", product.id, selectedSize, selectedColor);
+                  if (selectedSize) {
+                    addToCart(product.id, selectedSize, quantity);
+                  }
                 }}
               >
                 <ShoppingBag size={20} className="mr-2" />
@@ -237,19 +263,61 @@ const Product = () => {
               <Button
                 size="lg"
                 variant="outline"
-                className="w-14 h-14 p-0"
+                className={`w-14 h-14 p-0 ${isInWishlist(product.id) ? "text-destructive border-destructive" : ""}`}
                 onClick={() => {
                   if (!user) {
                     setAuthModalOpen(true);
                     return;
                   }
-                  // TODO: Добавить логику добавления в избранное через БД
-                  console.log("Добавлено в избранное:", product.id);
+                  toggleWishlist(product.id);
                 }}
               >
-                <Heart size={20} />
+                <Heart size={20} fill={isInWishlist(product.id) ? "currentColor" : "none"} />
               </Button>
             </div>
+
+            {/* Size Guide Table */}
+            {sizeGuideOpen && sizeGuideData.length > 0 && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: "auto" }}
+                className="mb-8 border border-border rounded-xl overflow-hidden"
+              >
+                <div className="p-4 bg-secondary/50">
+                  <h3 className="font-semibold flex items-center gap-2">
+                    <Ruler size={18} /> Таблица размеров (см)
+                  </h3>
+                </div>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b border-border bg-secondary/30">
+                        <th className="text-left p-3 font-semibold">Размер</th>
+                        {sizeGuideData[0]?.chest_cm != null && <th className="text-center p-3 font-semibold">Грудь</th>}
+                        {sizeGuideData[0]?.waist_cm != null && <th className="text-center p-3 font-semibold">Талия</th>}
+                        {sizeGuideData[0]?.hips_cm != null && <th className="text-center p-3 font-semibold">Бёдра</th>}
+                        {sizeGuideData[0]?.shoulder_cm != null && <th className="text-center p-3 font-semibold">Плечи</th>}
+                        {sizeGuideData[0]?.length_cm != null && <th className="text-center p-3 font-semibold">Длина</th>}
+                        {sizeGuideData[0]?.foot_cm != null && <th className="text-center p-3 font-semibold">Стопа</th>}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {sizeGuideData.map((row, i) => (
+                        <tr key={row.id} className={`border-b border-border last:border-0 ${i % 2 === 0 ? "" : "bg-secondary/20"}`}>
+                          <td className="p-3 font-medium">{row.size}</td>
+                          {row.chest_cm != null && <td className="text-center p-3">{row.chest_cm}</td>}
+                          {row.waist_cm != null && <td className="text-center p-3">{row.waist_cm}</td>}
+                          {row.hips_cm != null && <td className="text-center p-3">{row.hips_cm}</td>}
+                          {row.shoulder_cm != null && <td className="text-center p-3">{row.shoulder_cm}</td>}
+                          {row.length_cm != null && <td className="text-center p-3">{row.length_cm}</td>}
+                          {row.foot_cm != null && <td className="text-center p-3">{row.foot_cm}</td>}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </motion.div>
+            )}
 
             {/* Features */}
             <div className="space-y-4 border-t border-border pt-8">

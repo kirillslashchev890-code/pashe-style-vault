@@ -1,13 +1,17 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import Layout from "@/components/layout/Layout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { motion } from "framer-motion";
-import { User, Package, Heart, LogOut, Settings, MapPin, Mail, Lock, Eye, EyeOff, AlertCircle, ArrowLeft, CheckCircle } from "lucide-react";
+import { User, Package, Heart, LogOut, Settings, MapPin, Mail, Lock, Eye, EyeOff, AlertCircle, ArrowLeft, CheckCircle, Trash2 } from "lucide-react";
 import { z } from "zod";
 import { useAuth } from "@/hooks/useAuth";
+import { useWishlist } from "@/hooks/useWishlist";
+import { useOrders } from "@/hooks/useOrders";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 type TabType = "profile" | "orders" | "wishlist" | "addresses" | "settings";
 type AuthMode = "login" | "register" | "forgot";
@@ -18,6 +22,8 @@ const nameSchema = z.string().trim().min(2, { message: "Имя должно со
 
 const Account = () => {
   const { user, isLoading: authLoading, signIn, signUp, signOut, resetPassword } = useAuth();
+  const { items: wishlistItems, removeFromWishlist } = useWishlist();
+  const { orders, statusLabels } = useOrders();
   const [activeTab, setActiveTab] = useState<TabType>("profile");
   const [authMode, setAuthMode] = useState<AuthMode>("login");
   const [showPassword, setShowPassword] = useState(false);
@@ -28,6 +34,11 @@ const Account = () => {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [name, setName] = useState("");
+
+  // Profile fields
+  const [profileName, setProfileName] = useState("");
+  const [profilePhone, setProfilePhone] = useState("");
+  const [profileSaving, setProfileSaving] = useState(false);
 
   const [emailError, setEmailError] = useState("");
   const [passwordError, setPasswordError] = useState("");
@@ -42,6 +53,59 @@ const Account = () => {
     { id: "addresses" as TabType, label: "Адреса", icon: MapPin },
     { id: "settings" as TabType, label: "Настройки", icon: Settings },
   ];
+
+  // Load profile data
+  useEffect(() => {
+    if (!user) return;
+    setProfileName(user.user_metadata?.full_name || "");
+    
+    const loadProfile = async () => {
+      const { data } = await supabase
+        .from("profiles")
+        .select("phone, full_name")
+        .eq("user_id", user.id)
+        .maybeSingle();
+      if (data) {
+        setProfilePhone(data.phone || "");
+        if (data.full_name) setProfileName(data.full_name);
+      }
+    };
+    loadProfile();
+  }, [user]);
+
+  const saveProfile = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!user) return;
+    setProfileSaving(true);
+
+    const { error } = await supabase
+      .from("profiles")
+      .update({ full_name: profileName, phone: profilePhone })
+      .eq("user_id", user.id);
+
+    setProfileSaving(false);
+    if (error) {
+      toast.error("Ошибка при сохранении");
+      return;
+    }
+    toast.success("Данные сохранены");
+  };
+
+  const formatPrice = (price: number) => {
+    return new Intl.NumberFormat("ru-RU", {
+      style: "currency",
+      currency: "RUB",
+      minimumFractionDigits: 0,
+    }).format(price);
+  };
+
+  const formatDate = (dateStr: string) => {
+    return new Date(dateStr).toLocaleDateString("ru-RU", {
+      day: "numeric",
+      month: "long",
+      year: "numeric",
+    });
+  };
 
   const validateEmail = (value: string) => {
     const result = emailSchema.safeParse(value);
@@ -245,7 +309,7 @@ const Account = () => {
   }
 
   // Logged in view
-  const displayName = user.user_metadata?.full_name || user.email?.split("@")[0] || "Пользователь";
+  const displayName = profileName || user.user_metadata?.full_name || user.email?.split("@")[0] || "Пользователь";
 
   return (
     <Layout>
@@ -274,6 +338,11 @@ const Account = () => {
                       activeTab === tab.id ? "bg-primary text-primary-foreground" : "text-foreground hover:bg-secondary"
                     }`}>
                     <tab.icon size={18} /> {tab.label}
+                    {tab.id === "wishlist" && wishlistItems.length > 0 && (
+                      <span className="ml-auto bg-primary/20 text-primary text-xs font-semibold px-2 py-0.5 rounded-full">
+                        {wishlistItems.length}
+                      </span>
+                    )}
                   </button>
                 ))}
                 <button onClick={() => signOut()}
@@ -289,10 +358,15 @@ const Account = () => {
               {activeTab === "profile" && (
                 <div>
                   <h2 className="text-xl font-semibold mb-6">Мои данные</h2>
-                  <form className="space-y-4 max-w-md">
+                  <form onSubmit={saveProfile} className="space-y-4 max-w-md">
                     <div>
                       <Label htmlFor="profileName">Имя</Label>
-                      <Input id="profileName" defaultValue={displayName} className="mt-1.5 h-12" />
+                      <Input 
+                        id="profileName" 
+                        value={profileName} 
+                        onChange={(e) => setProfileName(e.target.value)}
+                        className="mt-1.5 h-12" 
+                      />
                     </div>
                     <div>
                       <Label htmlFor="profileEmail">Email</Label>
@@ -300,9 +374,17 @@ const Account = () => {
                     </div>
                     <div>
                       <Label htmlFor="profilePhone">Телефон</Label>
-                      <Input id="profilePhone" className="mt-1.5 h-12" placeholder="+7 (___) ___-__-__" />
+                      <Input 
+                        id="profilePhone" 
+                        className="mt-1.5 h-12" 
+                        placeholder="+7 (___) ___-__-__"
+                        value={profilePhone}
+                        onChange={(e) => setProfilePhone(e.target.value)}
+                      />
                     </div>
-                    <Button className="btn-gold">Сохранить изменения</Button>
+                    <Button type="submit" className="btn-gold" disabled={profileSaving}>
+                      {profileSaving ? "Сохранение..." : "Сохранить изменения"}
+                    </Button>
                   </form>
                 </div>
               )}
@@ -310,22 +392,83 @@ const Account = () => {
               {activeTab === "orders" && (
                 <div>
                   <h2 className="text-xl font-semibold mb-6">Мои заказы</h2>
-                  <div className="text-center py-12">
-                    <Package size={48} className="mx-auto text-muted-foreground mb-4" />
-                    <p className="text-muted-foreground">У вас пока нет заказов</p>
-                    <Link to="/catalog"><Button className="mt-4 btn-gold">Перейти в каталог</Button></Link>
-                  </div>
+                  {orders.length === 0 ? (
+                    <div className="text-center py-12">
+                      <Package size={48} className="mx-auto text-muted-foreground mb-4" />
+                      <p className="text-muted-foreground">У вас пока нет заказов</p>
+                      <Link to="/catalog"><Button className="mt-4 btn-gold">Перейти в каталог</Button></Link>
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      {orders.map((order) => (
+                        <div key={order.id} className="border border-border rounded-xl p-4">
+                          <div className="flex items-center justify-between mb-3">
+                            <div>
+                              <p className="font-medium">Заказ от {formatDate(order.created_at)}</p>
+                              <p className="text-muted-foreground text-sm">#{order.id.slice(0, 8)}</p>
+                            </div>
+                            <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
+                              order.status === "delivered" ? "bg-green-500/10 text-green-500" :
+                              order.status === "cancelled" ? "bg-destructive/10 text-destructive" :
+                              "bg-primary/10 text-primary"
+                            }`}>
+                              {statusLabels[order.status] || order.status}
+                            </span>
+                          </div>
+                          <div className="space-y-2">
+                            {order.items.map((item) => (
+                              <div key={item.id} className="flex justify-between text-sm">
+                                <span>{item.product_name} • {item.size}{item.color_name ? ` • ${item.color_name}` : ""} × {item.quantity}</span>
+                                <span className="font-medium">{formatPrice(item.price * item.quantity)}</span>
+                              </div>
+                            ))}
+                          </div>
+                          <div className="border-t border-border mt-3 pt-3 flex justify-between font-semibold">
+                            <span>Итого</span>
+                            <span>{formatPrice(order.total)}</span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               )}
 
               {activeTab === "wishlist" && (
                 <div>
                   <h2 className="text-xl font-semibold mb-6">Избранное</h2>
-                  <div className="text-center py-12">
-                    <Heart size={48} className="mx-auto text-muted-foreground mb-4" />
-                    <p className="text-muted-foreground">Список избранного пуст</p>
-                    <Link to="/catalog"><Button className="mt-4 btn-gold">Перейти в каталог</Button></Link>
-                  </div>
+                  {wishlistItems.length === 0 ? (
+                    <div className="text-center py-12">
+                      <Heart size={48} className="mx-auto text-muted-foreground mb-4" />
+                      <p className="text-muted-foreground">Список избранного пуст</p>
+                      <Link to="/catalog"><Button className="mt-4 btn-gold">Перейти в каталог</Button></Link>
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      {wishlistItems.map((item) => (
+                        <div key={item.id} className="flex gap-4 p-3 border border-border rounded-xl">
+                          <Link to={`/product/${item.product_id}`} className="shrink-0">
+                            <img src={item.product_image} alt={item.product_name} className="w-20 h-24 object-cover rounded-lg bg-secondary" />
+                          </Link>
+                          <div className="flex-1 min-w-0">
+                            <Link to={`/product/${item.product_id}`}>
+                              <h3 className="font-medium hover:text-primary transition-colors text-sm line-clamp-2">{item.product_name}</h3>
+                            </Link>
+                            <p className="font-semibold mt-1">{formatPrice(item.product_price)}</p>
+                            {item.product_old_price && (
+                              <p className="text-muted-foreground text-sm line-through">{formatPrice(item.product_old_price)}</p>
+                            )}
+                          </div>
+                          <button
+                            onClick={() => removeFromWishlist(item.product_id)}
+                            className="text-muted-foreground hover:text-destructive transition-colors self-start"
+                          >
+                            <Trash2 size={16} />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -356,19 +499,6 @@ const Account = () => {
                           <Input id="newPassword" type="password" className="mt-1.5 h-12" />
                         </div>
                         <Button className="btn-gold">Сменить пароль</Button>
-                      </div>
-                    </div>
-                    <div className="pt-6 border-t border-border">
-                      <h3 className="font-medium mb-3">Уведомления</h3>
-                      <div className="space-y-3">
-                        <label className="flex items-center gap-3 cursor-pointer">
-                          <input type="checkbox" className="w-5 h-5 rounded border-border" defaultChecked />
-                          <span className="text-sm">Новости и акции</span>
-                        </label>
-                        <label className="flex items-center gap-3 cursor-pointer">
-                          <input type="checkbox" className="w-5 h-5 rounded border-border" defaultChecked />
-                          <span className="text-sm">Статус заказа</span>
-                        </label>
                       </div>
                     </div>
                   </div>
