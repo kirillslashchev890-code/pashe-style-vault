@@ -54,6 +54,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       return { error: error.message };
     }
 
+    // Auto-confirm enabled, user is logged in immediately
     return { error: null };
   };
 

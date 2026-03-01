@@ -15,10 +15,21 @@ export interface CartItemWithProduct {
   color_name?: string;
 }
 
+interface AddToCartParams {
+  productId: string;
+  size: string;
+  quantity: number;
+  productName: string;
+  productPrice: number;
+  productImage: string;
+  colorId?: string;
+  colorName?: string;
+}
+
 interface CartContextType {
   items: CartItemWithProduct[];
   isLoading: boolean;
-  addToCart: (productId: string, size: string, quantity: number, colorId?: string) => Promise<void>;
+  addToCart: (params: AddToCartParams) => Promise<void>;
   removeFromCart: (cartItemId: string) => Promise<void>;
   updateQuantity: (cartItemId: string, quantity: number) => Promise<void>;
   clearCart: () => Promise<void>;
@@ -34,27 +45,14 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
   const [isLoading, setIsLoading] = useState(false);
 
   const fetchCart = useCallback(async () => {
-    if (!user) {
-      setItems([]);
-      return;
-    }
-
+    if (!user) { setItems([]); return; }
     setIsLoading(true);
     const { data, error } = await supabase
       .from("cart_items")
-      .select(`
-        id, product_id, size, color_id, quantity,
-        products ( name, price ),
-        product_colors ( name ),
-        product_images ( url )
-      `)
+      .select("*")
       .eq("user_id", user.id);
 
-    if (error) {
-      console.error("Error fetching cart:", error);
-      setIsLoading(false);
-      return;
-    }
+    if (error) { console.error("Error fetching cart:", error); setIsLoading(false); return; }
 
     const mapped: CartItemWithProduct[] = (data || []).map((item: any) => ({
       id: item.id,
@@ -62,45 +60,44 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
       size: item.size,
       color_id: item.color_id,
       quantity: item.quantity,
-      product_name: item.products?.name || "Товар",
-      product_price: item.products?.price || 0,
-      product_image: item.product_images?.[0]?.url || "/placeholder.svg",
-      color_name: item.product_colors?.name,
+      product_name: item.product_name || "Товар",
+      product_price: item.product_price || 0,
+      product_image: item.product_image || "/placeholder.svg",
+      color_name: item.color_name,
     }));
-
     setItems(mapped);
     setIsLoading(false);
   }, [user]);
 
-  useEffect(() => {
-    fetchCart();
-  }, [fetchCart]);
+  useEffect(() => { fetchCart(); }, [fetchCart]);
 
-  const addToCart = async (productId: string, size: string, quantity: number, colorId?: string) => {
+  const addToCart = async (params: AddToCartParams) => {
     if (!user) return;
 
-    // Check if item already in cart
     const { data: existing } = await supabase
       .from("cart_items")
       .select("id, quantity")
       .eq("user_id", user.id)
-      .eq("product_id", productId)
-      .eq("size", size)
+      .eq("product_id", params.productId)
+      .eq("size", params.size)
       .maybeSingle();
 
     if (existing) {
-      await supabase
-        .from("cart_items")
-        .update({ quantity: existing.quantity + quantity })
-        .eq("id", existing.id);
+      await supabase.from("cart_items")
+        .update({ quantity: (existing as any).quantity + params.quantity })
+        .eq("id", (existing as any).id);
     } else {
       await supabase.from("cart_items").insert({
         user_id: user.id,
-        product_id: productId,
-        size,
-        quantity,
-        color_id: colorId || null,
-      });
+        product_id: params.productId,
+        size: params.size,
+        quantity: params.quantity,
+        product_name: params.productName,
+        product_price: params.productPrice,
+        product_image: params.productImage,
+        color_id: params.colorId || null,
+        color_name: params.colorName || null,
+      } as any);
     }
 
     toast.success("Товар добавлен в корзину");
@@ -137,8 +134,6 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
 
 export const useCart = () => {
   const context = useContext(CartContext);
-  if (context === undefined) {
-    throw new Error("useCart must be used within a CartProvider");
-  }
+  if (!context) throw new Error("useCart must be used within a CartProvider");
   return context;
 };

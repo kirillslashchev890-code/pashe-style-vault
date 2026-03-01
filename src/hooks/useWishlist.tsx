@@ -2,6 +2,7 @@ import { useState, useEffect, createContext, useContext, ReactNode, useCallback 
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "./useAuth";
 import { toast } from "sonner";
+import { getProductById } from "@/data/products";
 
 export interface WishlistItemWithProduct {
   id: string;
@@ -29,69 +30,41 @@ export const WishlistProvider = ({ children }: { children: ReactNode }) => {
   const [isLoading, setIsLoading] = useState(false);
 
   const fetchWishlist = useCallback(async () => {
-    if (!user) {
-      setItems([]);
-      return;
-    }
-
+    if (!user) { setItems([]); return; }
     setIsLoading(true);
     const { data, error } = await supabase
       .from("wishlist")
-      .select(`
-        id, product_id,
-        products ( name, price, old_price )
-      `)
+      .select("id, product_id")
       .eq("user_id", user.id);
 
-    if (error) {
-      console.error("Error fetching wishlist:", error);
-      setIsLoading(false);
-      return;
-    }
+    if (error) { console.error("Error fetching wishlist:", error); setIsLoading(false); return; }
 
-    // Fetch images separately for each product
-    const mapped: WishlistItemWithProduct[] = [];
-    for (const item of data || []) {
-      const product = item.products as any;
-      // Get first image
-      const { data: imgData } = await supabase
-        .from("product_images")
-        .select("url")
-        .eq("product_id", item.product_id)
-        .order("sort_order")
-        .limit(1);
-
-      mapped.push({
+    const mapped: WishlistItemWithProduct[] = (data || []).map((item: any) => {
+      const product = getProductById(item.product_id);
+      return {
         id: item.id,
         product_id: item.product_id,
         product_name: product?.name || "Товар",
         product_price: product?.price || 0,
-        product_old_price: product?.old_price || undefined,
-        product_image: imgData?.[0]?.url || "/placeholder.svg",
-      });
-    }
-
+        product_old_price: product?.originalPrice,
+        product_image: product?.images[0] || "/placeholder.svg",
+      };
+    });
     setItems(mapped);
     setIsLoading(false);
   }, [user]);
 
-  useEffect(() => {
-    fetchWishlist();
-  }, [fetchWishlist]);
+  useEffect(() => { fetchWishlist(); }, [fetchWishlist]);
 
   const addToWishlist = async (productId: string) => {
     if (!user) return;
     const { error } = await supabase.from("wishlist").insert({
       user_id: user.id,
       product_id: productId,
-    });
+    } as any);
     if (error) {
-      if (error.code === "23505") {
-        toast.info("Товар уже в избранном");
-        return;
-      }
-      console.error("Error adding to wishlist:", error);
-      return;
+      if (error.code === "23505") { toast.info("Товар уже в избранном"); return; }
+      console.error(error); return;
     }
     toast.success("Добавлено в избранное");
     await fetchWishlist();
@@ -99,25 +72,16 @@ export const WishlistProvider = ({ children }: { children: ReactNode }) => {
 
   const removeFromWishlist = async (productId: string) => {
     if (!user) return;
-    await supabase
-      .from("wishlist")
-      .delete()
-      .eq("user_id", user.id)
-      .eq("product_id", productId);
+    await supabase.from("wishlist").delete().eq("user_id", user.id).eq("product_id", productId);
     toast.success("Удалено из избранного");
     await fetchWishlist();
   };
 
-  const isInWishlist = (productId: string) => {
-    return items.some(i => i.product_id === productId);
-  };
+  const isInWishlist = (productId: string) => items.some(i => i.product_id === productId);
 
   const toggleWishlist = async (productId: string) => {
-    if (isInWishlist(productId)) {
-      await removeFromWishlist(productId);
-    } else {
-      await addToWishlist(productId);
-    }
+    if (isInWishlist(productId)) await removeFromWishlist(productId);
+    else await addToWishlist(productId);
   };
 
   return (
@@ -129,8 +93,6 @@ export const WishlistProvider = ({ children }: { children: ReactNode }) => {
 
 export const useWishlist = () => {
   const context = useContext(WishlistContext);
-  if (context === undefined) {
-    throw new Error("useWishlist must be used within a WishlistProvider");
-  }
+  if (!context) throw new Error("useWishlist must be used within a WishlistProvider");
   return context;
 };

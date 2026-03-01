@@ -1,11 +1,11 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Link } from "react-router-dom";
 import Layout from "@/components/layout/Layout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { motion } from "framer-motion";
-import { User, Package, Heart, LogOut, Settings, MapPin, Mail, Lock, Eye, EyeOff, AlertCircle, ArrowLeft, CheckCircle, Trash2 } from "lucide-react";
+import { User, Package, Heart, LogOut, Settings, Mail, Lock, Eye, EyeOff, AlertCircle, ArrowLeft, CheckCircle, Trash2, Camera } from "lucide-react";
 import { z } from "zod";
 import { useAuth } from "@/hooks/useAuth";
 import { useWishlist } from "@/hooks/useWishlist";
@@ -13,10 +13,10 @@ import { useOrders } from "@/hooks/useOrders";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
-type TabType = "profile" | "orders" | "wishlist" | "addresses" | "settings";
+type TabType = "profile" | "orders" | "wishlist" | "settings";
 type AuthMode = "login" | "register" | "forgot";
 
-const emailSchema = z.string().trim().email({ message: "Введите корректный email" });
+const emailSchema = z.string().trim().email({ message: "Введите корректный email (нужен символ @)" });
 const passwordSchema = z.string().min(6, { message: "Пароль должен содержать минимум 6 символов" });
 const nameSchema = z.string().trim().min(2, { message: "Имя должно содержать минимум 2 символа" });
 
@@ -29,15 +29,20 @@ const Account = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [successMessage, setSuccessMessage] = useState("");
+  const avatarRef = useRef<HTMLInputElement>(null);
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [name, setName] = useState("");
 
-  // Profile fields
   const [profileName, setProfileName] = useState("");
   const [profilePhone, setProfilePhone] = useState("");
+  const [profileCity, setProfileCity] = useState("");
+  const [profileStreet, setProfileStreet] = useState("");
+  const [profileApartment, setProfileApartment] = useState("");
+  const [profileZip, setProfileZip] = useState("");
+  const [profileAvatar, setProfileAvatar] = useState<string | null>(null);
   const [profileSaving, setProfileSaving] = useState(false);
 
   const [emailError, setEmailError] = useState("");
@@ -50,95 +55,86 @@ const Account = () => {
     { id: "profile" as TabType, label: "Профиль", icon: User },
     { id: "orders" as TabType, label: "Заказы", icon: Package },
     { id: "wishlist" as TabType, label: "Избранное", icon: Heart },
-    { id: "addresses" as TabType, label: "Адреса", icon: MapPin },
     { id: "settings" as TabType, label: "Настройки", icon: Settings },
   ];
 
-  // Load profile data
   useEffect(() => {
     if (!user) return;
     setProfileName(user.user_metadata?.full_name || "");
-    
     const loadProfile = async () => {
-      const { data } = await supabase
-        .from("profiles")
-        .select("phone, full_name")
-        .eq("user_id", user.id)
-        .maybeSingle();
+      const { data } = await supabase.from("profiles").select("*").eq("user_id", user.id).maybeSingle();
       if (data) {
-        setProfilePhone(data.phone || "");
-        if (data.full_name) setProfileName(data.full_name);
+        setProfilePhone((data as any).phone || "");
+        if ((data as any).full_name) setProfileName((data as any).full_name);
+        setProfileCity((data as any).address_city || "");
+        setProfileStreet((data as any).address_street || "");
+        setProfileApartment((data as any).address_apartment || "");
+        setProfileZip((data as any).address_zip || "");
+        setProfileAvatar((data as any).avatar_url || null);
       }
     };
     loadProfile();
   }, [user]);
 
+  const handlePhoneChange = (val: string) => {
+    const digits = val.replace(/\D/g, "").slice(0, 11);
+    setProfilePhone(digits);
+  };
+
+  const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !user) return;
+    const ext = file.name.split(".").pop();
+    const path = `${user.id}/avatar.${ext}`;
+
+    const { error } = await supabase.storage.from("avatars").upload(path, file, { upsert: true });
+    if (error) { toast.error("Ошибка загрузки аватарки"); return; }
+
+    const { data: urlData } = supabase.storage.from("avatars").getPublicUrl(path);
+    const avatarUrl = urlData.publicUrl + "?t=" + Date.now();
+    await supabase.from("profiles").update({ avatar_url: avatarUrl } as any).eq("user_id", user.id);
+    setProfileAvatar(avatarUrl);
+    toast.success("Аватарка обновлена");
+  };
+
   const saveProfile = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user) return;
-    setProfileSaving(true);
-
-    const { error } = await supabase
-      .from("profiles")
-      .update({ full_name: profileName, phone: profilePhone })
-      .eq("user_id", user.id);
-
-    setProfileSaving(false);
-    if (error) {
-      toast.error("Ошибка при сохранении");
+    if (profilePhone && profilePhone.length !== 11) {
+      toast.error("Номер телефона должен содержать 11 цифр");
       return;
     }
+    setProfileSaving(true);
+    const { error } = await supabase.from("profiles").update({
+      full_name: profileName,
+      phone: profilePhone,
+      address_city: profileCity,
+      address_street: profileStreet,
+      address_apartment: profileApartment,
+      address_zip: profileZip,
+    } as any).eq("user_id", user.id);
+    setProfileSaving(false);
+    if (error) { toast.error("Ошибка при сохранении"); return; }
     toast.success("Данные сохранены");
   };
 
-  const formatPrice = (price: number) => {
-    return new Intl.NumberFormat("ru-RU", {
-      style: "currency",
-      currency: "RUB",
-      minimumFractionDigits: 0,
-    }).format(price);
-  };
+  const formatPrice = (price: number) =>
+    new Intl.NumberFormat("ru-RU", { style: "currency", currency: "RUB", minimumFractionDigits: 0 }).format(price);
 
-  const formatDate = (dateStr: string) => {
-    return new Date(dateStr).toLocaleDateString("ru-RU", {
-      day: "numeric",
-      month: "long",
-      year: "numeric",
-    });
-  };
+  const formatDate = (dateStr: string) =>
+    new Date(dateStr).toLocaleDateString("ru-RU", { day: "numeric", month: "long", year: "numeric" });
 
-  const validateEmail = (value: string) => {
-    const result = emailSchema.safeParse(value);
-    if (!result.success) { setEmailError(result.error.errors[0].message); return false; }
-    setEmailError(""); return true;
-  };
-  const validatePassword = (value: string) => {
-    const result = passwordSchema.safeParse(value);
-    if (!result.success) { setPasswordError(result.error.errors[0].message); return false; }
-    setPasswordError(""); return true;
-  };
-  const validateName = (value: string) => {
-    const result = nameSchema.safeParse(value);
-    if (!result.success) { setNameError(result.error.errors[0].message); return false; }
-    setNameError(""); return true;
-  };
-  const validateConfirmPassword = (value: string) => {
-    if (value !== password) { setConfirmPasswordError("Пароли не совпадают"); return false; }
-    setConfirmPasswordError(""); return true;
-  };
+  const validateEmail = (v: string) => { const r = emailSchema.safeParse(v); if (!r.success) { setEmailError(r.error.errors[0].message); return false; } setEmailError(""); return true; };
+  const validatePassword = (v: string) => { const r = passwordSchema.safeParse(v); if (!r.success) { setPasswordError(r.error.errors[0].message); return false; } setPasswordError(""); return true; };
+  const validateName = (v: string) => { const r = nameSchema.safeParse(v); if (!r.success) { setNameError(r.error.errors[0].message); return false; } setNameError(""); return true; };
+  const validateConfirmPassword = (v: string) => { if (v !== password) { setConfirmPasswordError("Пароли не совпадают"); return false; } setConfirmPasswordError(""); return true; };
 
-  const resetForm = () => {
-    setEmail(""); setPassword(""); setConfirmPassword(""); setName("");
-    setEmailError(""); setPasswordError(""); setConfirmPasswordError(""); setNameError("");
-    setGeneralError(""); setSuccessMessage("");
-  };
-
-  const switchAuthMode = (newMode: AuthMode) => { resetForm(); setAuthMode(newMode); };
+  const resetForm = () => { setEmail(""); setPassword(""); setConfirmPassword(""); setName(""); setEmailError(""); setPasswordError(""); setConfirmPasswordError(""); setNameError(""); setGeneralError(""); setSuccessMessage(""); };
+  const switchAuthMode = (m: AuthMode) => { resetForm(); setAuthMode(m); };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setGeneralError("");
-    setSuccessMessage("");
+    setGeneralError(""); setSuccessMessage("");
 
     if (authMode === "forgot") {
       if (!validateEmail(email)) return;
@@ -146,7 +142,7 @@ const Account = () => {
       const { error } = await resetPassword(email);
       setIsLoading(false);
       if (error) { setGeneralError(error); return; }
-      setSuccessMessage("Инструкции по восстановлению пароля отправлены на вашу почту");
+      setSuccessMessage("Новый пароль отправлен на вашу почту");
       setTimeout(() => switchAuthMode("login"), 3000);
       return;
     }
@@ -154,24 +150,20 @@ const Account = () => {
     const isEmailValid = validateEmail(email);
     const isPasswordValid = validatePassword(password);
     let isValid = isEmailValid && isPasswordValid;
-
     if (authMode === "register") {
-      const isNameValid = validateName(name);
-      const isConfirmValid = validateConfirmPassword(confirmPassword);
-      isValid = isValid && isNameValid && isConfirmValid;
+      isValid = isValid && validateName(name) && validateConfirmPassword(confirmPassword);
     }
     if (!isValid) return;
 
     setIsLoading(true);
-
     if (authMode === "register") {
       const { error } = await signUp(email, password, name);
       setIsLoading(false);
       if (error) { setGeneralError(error); return; }
-      setSuccessMessage("Регистрация успешна! Проверьте почту для подтверждения email.");
+      // auto-confirm enabled, user is logged in automatically
+      resetForm();
       return;
     }
-
     const { error } = await signIn(email, password);
     setIsLoading(false);
     if (error) { setGeneralError(error); return; }
@@ -179,13 +171,7 @@ const Account = () => {
   };
 
   if (authLoading) {
-    return (
-      <Layout>
-        <div className="container mx-auto px-4 py-16 md:py-24 text-center">
-          <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin mx-auto" />
-        </div>
-      </Layout>
-    );
+    return <Layout><div className="container mx-auto px-4 py-16 md:py-24 text-center"><div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin mx-auto" /></div></Layout>;
   }
 
   if (!user) {
@@ -206,19 +192,9 @@ const Account = () => {
                 {authMode === "login" ? "Войдите в свой аккаунт" : authMode === "register" ? "Создайте аккаунт для покупок" : "Введите email для восстановления пароля"}
               </p>
             </div>
-
             <div className="bg-card rounded-2xl border border-border p-6">
-              {successMessage && (
-                <div className="flex items-center gap-2 p-3 mb-4 bg-primary/10 border border-primary/20 rounded-lg text-primary text-sm">
-                  <CheckCircle size={16} className="shrink-0" /> {successMessage}
-                </div>
-              )}
-              {generalError && (
-                <div className="flex items-center gap-2 p-3 mb-4 bg-destructive/10 border border-destructive/20 rounded-lg text-destructive text-sm">
-                  <AlertCircle size={16} className="shrink-0" /> {generalError}
-                </div>
-              )}
-
+              {successMessage && <div className="flex items-center gap-2 p-3 mb-4 bg-primary/10 border border-primary/20 rounded-lg text-primary text-sm"><CheckCircle size={16} className="shrink-0" />{successMessage}</div>}
+              {generalError && <div className="flex items-center gap-2 p-3 mb-4 bg-destructive/10 border border-destructive/20 rounded-lg text-destructive text-sm"><AlertCircle size={16} className="shrink-0" />{generalError}</div>}
               <form onSubmit={handleSubmit} className="space-y-4">
                 {authMode === "register" && (
                   <div>
@@ -232,7 +208,6 @@ const Account = () => {
                     {nameError && <p className="text-destructive text-sm mt-1">{nameError}</p>}
                   </div>
                 )}
-
                 <div>
                   <Label htmlFor="email">Email</Label>
                   <div className="relative mt-1.5">
@@ -243,7 +218,6 @@ const Account = () => {
                   </div>
                   {emailError && <p className="text-destructive text-sm mt-1">{emailError}</p>}
                 </div>
-
                 {authMode !== "forgot" && (
                   <div>
                     <Label htmlFor="password">Пароль</Label>
@@ -260,7 +234,6 @@ const Account = () => {
                     {passwordError && <p className="text-destructive text-sm mt-1">{passwordError}</p>}
                   </div>
                 )}
-
                 {authMode === "register" && (
                   <div>
                     <Label htmlFor="confirmPassword">Подтвердите пароль</Label>
@@ -274,23 +247,16 @@ const Account = () => {
                     {confirmPasswordError && <p className="text-destructive text-sm mt-1">{confirmPasswordError}</p>}
                   </div>
                 )}
-
                 {authMode === "login" && (
                   <div className="text-right">
                     <button type="button" onClick={() => switchAuthMode("forgot")} className="text-primary text-sm hover:underline">Забыли пароль?</button>
                   </div>
                 )}
-
                 <Button type="submit" className="w-full btn-gold h-12" disabled={isLoading}>
-                  {isLoading ? (
-                    <span className="flex items-center gap-2">
-                      <span className="w-4 h-4 border-2 border-primary-foreground border-t-transparent rounded-full animate-spin" />
-                      Загрузка...
-                    </span>
-                  ) : authMode === "forgot" ? "Отправить инструкции" : authMode === "login" ? "Войти" : "Зарегистрироваться"}
+                  {isLoading ? <span className="flex items-center gap-2"><span className="w-4 h-4 border-2 border-primary-foreground border-t-transparent rounded-full animate-spin" />Загрузка...</span>
+                    : authMode === "forgot" ? "Отправить" : authMode === "login" ? "Войти" : "Зарегистрироваться"}
                 </Button>
               </form>
-
               {authMode !== "forgot" && (
                 <div className="mt-6 text-center">
                   <p className="text-muted-foreground text-sm">
@@ -308,7 +274,6 @@ const Account = () => {
     );
   }
 
-  // Logged in view
   const displayName = profileName || user.user_metadata?.full_name || user.email?.split("@")[0] || "Пользователь";
 
   return (
@@ -317,70 +282,93 @@ const Account = () => {
         <motion.h1 initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="text-3xl md:text-4xl font-bold mb-8">
           Личный кабинет
         </motion.h1>
-
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
+          {/* Sidebar */}
           <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} className="lg:col-span-1">
             <div className="bg-card rounded-2xl border border-border p-4">
               <div className="flex items-center gap-3 p-3 mb-4">
-                <div className="w-12 h-12 rounded-full bg-primary flex items-center justify-center text-primary-foreground font-semibold text-lg">
-                  {displayName.charAt(0).toUpperCase()}
+                <div
+                  className="w-12 h-12 rounded-full bg-primary flex items-center justify-center text-primary-foreground font-semibold text-lg overflow-hidden cursor-pointer relative"
+                  onClick={() => avatarRef.current?.click()}
+                >
+                  {profileAvatar ? (
+                    <img src={profileAvatar} alt="avatar" className="w-full h-full object-cover" />
+                  ) : (
+                    displayName.charAt(0).toUpperCase()
+                  )}
+                  <div className="absolute inset-0 bg-background/50 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity">
+                    <Camera size={16} />
+                  </div>
                 </div>
                 <div>
                   <p className="font-medium">{displayName}</p>
                   <p className="text-muted-foreground text-sm">{user.email}</p>
                 </div>
+                <input ref={avatarRef} type="file" accept="image/*" className="hidden" onChange={handleAvatarUpload} />
               </div>
-
               <nav className="space-y-1">
                 {tabs.map((tab) => (
                   <button key={tab.id} onClick={() => setActiveTab(tab.id)}
-                    className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-left transition-colors ${
-                      activeTab === tab.id ? "bg-primary text-primary-foreground" : "text-foreground hover:bg-secondary"
-                    }`}>
+                    className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-left transition-colors ${activeTab === tab.id ? "bg-primary text-primary-foreground" : "text-foreground hover:bg-secondary"}`}>
                     <tab.icon size={18} /> {tab.label}
                     {tab.id === "wishlist" && wishlistItems.length > 0 && (
-                      <span className="ml-auto bg-primary/20 text-primary text-xs font-semibold px-2 py-0.5 rounded-full">
-                        {wishlistItems.length}
-                      </span>
+                      <span className="ml-auto bg-primary/20 text-primary text-xs font-semibold px-2 py-0.5 rounded-full">{wishlistItems.length}</span>
                     )}
                   </button>
                 ))}
-                <button onClick={() => signOut()}
-                  className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-left text-destructive hover:bg-destructive/10 transition-colors">
+                <button onClick={() => signOut()} className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-left text-destructive hover:bg-destructive/10 transition-colors">
                   <LogOut size={18} /> Выйти
                 </button>
               </nav>
             </div>
           </motion.div>
 
+          {/* Content */}
           <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="lg:col-span-3">
             <div className="bg-card rounded-2xl border border-border p-6">
               {activeTab === "profile" && (
                 <div>
                   <h2 className="text-xl font-semibold mb-6">Мои данные</h2>
-                  <form onSubmit={saveProfile} className="space-y-4 max-w-md">
+                  <form onSubmit={saveProfile} className="space-y-4 max-w-lg">
                     <div>
-                      <Label htmlFor="profileName">Имя</Label>
-                      <Input 
-                        id="profileName" 
-                        value={profileName} 
-                        onChange={(e) => setProfileName(e.target.value)}
-                        className="mt-1.5 h-12" 
-                      />
+                      <Label>Имя</Label>
+                      <Input value={profileName} onChange={(e) => setProfileName(e.target.value)} className="mt-1.5 h-12" />
                     </div>
                     <div>
-                      <Label htmlFor="profileEmail">Email</Label>
-                      <Input id="profileEmail" type="email" defaultValue={user.email || ""} className="mt-1.5 h-12" disabled />
+                      <Label>Email</Label>
+                      <Input type="email" defaultValue={user.email || ""} className="mt-1.5 h-12" disabled />
                     </div>
                     <div>
-                      <Label htmlFor="profilePhone">Телефон</Label>
-                      <Input 
-                        id="profilePhone" 
-                        className="mt-1.5 h-12" 
-                        placeholder="+7 (___) ___-__-__"
+                      <Label>Телефон</Label>
+                      <Input
                         value={profilePhone}
-                        onChange={(e) => setProfilePhone(e.target.value)}
+                        onChange={(e) => handlePhoneChange(e.target.value)}
+                        className="mt-1.5 h-12"
+                        placeholder="89627923580"
+                        maxLength={11}
                       />
+                      <p className="text-xs text-muted-foreground mt-1">11 цифр, начиная с 8</p>
+                    </div>
+                    <div className="border-t border-border pt-4 mt-4">
+                      <h3 className="font-medium mb-3">Адрес доставки</h3>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div>
+                          <Label>Город</Label>
+                          <Input value={profileCity} onChange={(e) => setProfileCity(e.target.value)} className="mt-1.5 h-12" placeholder="Москва" />
+                        </div>
+                        <div>
+                          <Label>Индекс</Label>
+                          <Input value={profileZip} onChange={(e) => setProfileZip(e.target.value.replace(/\D/g, "").slice(0, 6))} className="mt-1.5 h-12" placeholder="101000" />
+                        </div>
+                        <div className="sm:col-span-2">
+                          <Label>Улица, дом</Label>
+                          <Input value={profileStreet} onChange={(e) => setProfileStreet(e.target.value)} className="mt-1.5 h-12" placeholder="ул. Тверская, д. 1" />
+                        </div>
+                        <div>
+                          <Label>Квартира</Label>
+                          <Input value={profileApartment} onChange={(e) => setProfileApartment(e.target.value)} className="mt-1.5 h-12" placeholder="кв. 10" />
+                        </div>
+                      </div>
                     </div>
                     <Button type="submit" className="btn-gold" disabled={profileSaving}>
                       {profileSaving ? "Сохранение..." : "Сохранить изменения"}
@@ -409,11 +397,8 @@ const Account = () => {
                             </div>
                             <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
                               order.status === "delivered" ? "bg-green-500/10 text-green-500" :
-                              order.status === "cancelled" ? "bg-destructive/10 text-destructive" :
-                              "bg-primary/10 text-primary"
-                            }`}>
-                              {statusLabels[order.status] || order.status}
-                            </span>
+                              order.status === "cancelled" ? "bg-destructive/10 text-destructive" : "bg-primary/10 text-primary"
+                            }`}>{statusLabels[order.status] || order.status}</span>
                           </div>
                           <div className="space-y-2">
                             {order.items.map((item) => (
@@ -455,31 +440,15 @@ const Account = () => {
                               <h3 className="font-medium hover:text-primary transition-colors text-sm line-clamp-2">{item.product_name}</h3>
                             </Link>
                             <p className="font-semibold mt-1">{formatPrice(item.product_price)}</p>
-                            {item.product_old_price && (
-                              <p className="text-muted-foreground text-sm line-through">{formatPrice(item.product_old_price)}</p>
-                            )}
+                            {item.product_old_price && <p className="text-muted-foreground text-sm line-through">{formatPrice(item.product_old_price)}</p>}
                           </div>
-                          <button
-                            onClick={() => removeFromWishlist(item.product_id)}
-                            className="text-muted-foreground hover:text-destructive transition-colors self-start"
-                          >
+                          <button onClick={() => removeFromWishlist(item.product_id)} className="text-muted-foreground hover:text-destructive transition-colors self-start">
                             <Trash2 size={16} />
                           </button>
                         </div>
                       ))}
                     </div>
                   )}
-                </div>
-              )}
-
-              {activeTab === "addresses" && (
-                <div>
-                  <h2 className="text-xl font-semibold mb-6">Адреса доставки</h2>
-                  <div className="text-center py-12">
-                    <MapPin size={48} className="mx-auto text-muted-foreground mb-4" />
-                    <p className="text-muted-foreground">Нет сохранённых адресов</p>
-                    <Button className="mt-4 btn-gold">Добавить адрес</Button>
-                  </div>
                 </div>
               )}
 
@@ -490,14 +459,8 @@ const Account = () => {
                     <div>
                       <h3 className="font-medium mb-3">Сменить пароль</h3>
                       <div className="space-y-3">
-                        <div>
-                          <Label htmlFor="currentPassword">Текущий пароль</Label>
-                          <Input id="currentPassword" type="password" className="mt-1.5 h-12" />
-                        </div>
-                        <div>
-                          <Label htmlFor="newPassword">Новый пароль</Label>
-                          <Input id="newPassword" type="password" className="mt-1.5 h-12" />
-                        </div>
+                        <div><Label>Текущий пароль</Label><Input type="password" className="mt-1.5 h-12" /></div>
+                        <div><Label>Новый пароль</Label><Input type="password" className="mt-1.5 h-12" /></div>
                         <Button className="btn-gold">Сменить пароль</Button>
                       </div>
                     </div>
