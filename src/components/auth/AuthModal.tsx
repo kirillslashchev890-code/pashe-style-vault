@@ -96,7 +96,10 @@ const AuthModal = ({ isOpen, onClose, onSuccess }: AuthModalProps) => {
       const { error } = await signUp(email, password, name);
       setIsLoading(false);
       if (error) { setGeneralError(error); return; }
-      setSuccessMessage("Регистрация успешна! Проверьте почту для подтверждения email.");
+      // Auto-confirm enabled, user logged in automatically
+      onSuccess?.();
+      onClose();
+      resetForm();
       return;
     }
 
