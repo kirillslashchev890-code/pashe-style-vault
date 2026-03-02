@@ -1,19 +1,17 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import { ShoppingBag, User, Menu, Search, Sun, Moon, Globe } from "lucide-react";
+import { ShoppingBag, User, Menu, Search, Sun, Moon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import CategoryDrawer from "./CategoryDrawer";
 import SearchModal from "./SearchModal";
 import { useCart } from "@/hooks/useCart";
 import { useTheme } from "next-themes";
-import { useLanguage } from "@/hooks/useLanguage";
 
 const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const { itemCount } = useCart();
   const { resolvedTheme, setTheme } = useTheme();
-  const { lang, setLang } = useLanguage();
 
   return (
     <>
@@ -37,15 +35,6 @@ const Header = () => {
 
             {/* Right */}
             <div className="flex items-center gap-1">
-              <Button
-                variant="ghost"
-                size="icon"
-                className="text-foreground/80 hover:text-primary"
-                onClick={() => setLang(lang === "ru" ? "en" : "ru")}
-                title={lang === "ru" ? "Switch to English" : "Переключить на русский"}
-              >
-                <Globe size={18} />
-              </Button>
               <Button
                 variant="ghost"
                 size="icon"

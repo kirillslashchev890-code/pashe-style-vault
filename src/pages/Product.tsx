@@ -3,7 +3,7 @@ import { useParams, Link } from "react-router-dom";
 import Layout from "@/components/layout/Layout";
 import { Button } from "@/components/ui/button";
 import { motion, AnimatePresence } from "framer-motion";
-import { Heart, ShoppingBag, Minus, Plus, ChevronLeft, Truck, RefreshCw, Shield, ChevronDown, Ruler } from "lucide-react";
+import { Heart, ShoppingBag, Minus, Plus, ChevronLeft, Truck, RefreshCw, Shield, ChevronDown, Ruler, AlertTriangle } from "lucide-react";
 import { getProductById, products } from "@/data/products";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import ImageLightbox from "@/components/product/ImageLightbox";
@@ -13,6 +13,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useCart } from "@/hooks/useCart";
 import { useWishlist } from "@/hooks/useWishlist";
 import { supabase } from "@/integrations/supabase/client";
+import { deliveryRegions } from "@/data/deliveryRegions";
 
 const Product = () => {
   const { id } = useParams();
@@ -33,6 +34,13 @@ const Product = () => {
 
   const product = getProductById(id || "") || products[0];
 
+  // Set default color on mount
+  useEffect(() => {
+    if (product.colors.length > 0 && !selectedColor) {
+      setSelectedColor(product.colors[0].name);
+    }
+  }, [product.id]);
+
   useEffect(() => {
     const fetchSizeGuide = async () => {
       const { data } = await supabase.from("size_guide").select("*").eq("category_slug", product.category).order("size");
@@ -41,7 +49,11 @@ const Product = () => {
     fetchSizeGuide();
   }, [product.category]);
 
-  const currentImages = selectedColor && product.colorImages?.[selectedColor] ? product.colorImages[selectedColor] : product.images;
+  // Each color maps to exactly 1 image set. colorImages has 3 photos per color.
+  // When selecting a color, show that color's images.
+  const currentImages = selectedColor && product.colorImages?.[selectedColor]
+    ? product.colorImages[selectedColor]
+    : product.images;
 
   const formatPrice = (price: number) =>
     new Intl.NumberFormat("ru-RU", { style: "currency", currency: "RUB", minimumFractionDigits: 0 }).format(price);
@@ -59,7 +71,7 @@ const Product = () => {
           {/* Images */}
           <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.5 }}>
             <div className="relative aspect-[3/4] rounded-2xl overflow-hidden bg-secondary mb-4 cursor-zoom-in" onClick={() => setLightboxOpen(true)}>
-              <img src={currentImages[selectedImage]} alt={product.name} className="absolute inset-0 w-full h-full object-cover hover:scale-105 transition-transform duration-300" />
+              <img src={currentImages[selectedImage] || currentImages[0]} alt={product.name} className="absolute inset-0 w-full h-full object-cover hover:scale-105 transition-transform duration-300" />
               {discount && <span className="absolute top-4 left-4 bg-destructive text-destructive-foreground text-sm font-semibold px-3 py-1 rounded-full">-{discount}%</span>}
               {product.isNew && <span className="absolute top-4 right-4 bg-primary text-primary-foreground text-sm font-semibold px-3 py-1 rounded-full">NEW</span>}
               <div className="absolute inset-0 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity bg-background/20">
@@ -90,9 +102,9 @@ const Product = () => {
             </div>
             <p className="text-muted-foreground mb-8">{product.description}</p>
 
-            {/* Colors */}
+            {/* Colors - clicking a color shows that color's photo */}
             <div className="mb-6">
-              <span className="font-medium block mb-3">Цвет: {selectedColor || product.colors[0]?.name || "Выберите цвет"}</span>
+              <span className="font-medium block mb-3">Цвет: {selectedColor || "Выберите цвет"}</span>
               <div className="flex gap-2 flex-wrap">
                 {product.colors.map((color) => (
                   <button key={color.name} onClick={() => { setSelectedColor(color.name); setSelectedImage(0); }}
@@ -141,14 +153,10 @@ const Product = () => {
                   if (!user) { setAuthModalOpen(true); return; }
                   if (selectedSize) {
                     addToCart({
-                      productId: product.id,
-                      size: selectedSize,
-                      quantity,
-                      productName: product.name,
-                      productPrice: product.price,
+                      productId: product.id, size: selectedSize, quantity,
+                      productName: product.name, productPrice: product.price,
                       productImage: currentImages[0],
-                      colorId: selectedColor || undefined,
-                      colorName: selectedColor || undefined,
+                      colorId: selectedColor || undefined, colorName: selectedColor || undefined,
                     });
                   }
                 }}>
@@ -197,7 +205,7 @@ const Product = () => {
 
             {/* Features */}
             <div className="space-y-4 border-t border-border pt-8">
-              <div className="flex items-center gap-4"><Truck size={20} className="text-primary" /><div><p className="font-medium">Бесплатная доставка</p><p className="text-muted-foreground text-sm">При заказе от 10 000 ₽</p></div></div>
+              <div className="flex items-center gap-4"><Truck size={20} className="text-primary" /><div><p className="font-medium">Доставка по России</p><p className="text-muted-foreground text-sm">От 500 до 2 000 ₽ в зависимости от региона</p></div></div>
               <div className="flex items-center gap-4"><RefreshCw size={20} className="text-primary" /><div><p className="font-medium">Возврат 30 дней</p><p className="text-muted-foreground text-sm">Простой обмен и возврат</p></div></div>
               <div className="flex items-center gap-4"><Shield size={20} className="text-primary" /><div><p className="font-medium">Гарантия качества</p><p className="text-muted-foreground text-sm">Только оригинальные товары</p></div></div>
             </div>
@@ -239,7 +247,23 @@ const Product = () => {
                 <CollapsibleContent>
                   <AnimatePresence><motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }} className="pb-4">
                     <div className="space-y-4 text-sm">
-                      <div><p className="font-medium mb-1">Доставка</p><ul className="space-y-1 text-muted-foreground"><li>• Курьером по Москве: 1-2 дня</li><li>• В пункты выдачи: 2-5 дней</li><li>• Бесплатная доставка при заказе от 10 000 ₽</li></ul></div>
+                      <div className="flex items-center gap-2 p-3 bg-destructive/10 border border-destructive/20 rounded-lg text-destructive">
+                        <AlertTriangle size={14} className="shrink-0" />
+                        <span>Доставка только по территории России. Международная доставка недоступна.</span>
+                      </div>
+                      <div>
+                        <p className="font-medium mb-2">Стоимость доставки по регионам:</p>
+                        <div className="max-h-48 overflow-y-auto space-y-1">
+                          {deliveryRegions.slice(0, 15).map(r => (
+                            <div key={r.name} className="flex justify-between text-muted-foreground">
+                              <span>{r.name}</span>
+                              <span>{r.cost} ₽ ({r.days})</span>
+                            </div>
+                          ))}
+                          <p className="text-muted-foreground text-xs mt-2">...и другие регионы (полный список при оформлении)</p>
+                        </div>
+                      </div>
+                      <div><p className="font-medium mb-1">Бесплатная доставка</p><p className="text-muted-foreground">При заказе от 15 000 ₽</p></div>
                       <div><p className="font-medium mb-1">Возврат</p><ul className="space-y-1 text-muted-foreground"><li>• Возврат в течение 30 дней</li><li>• Бесплатный возврат курьером</li></ul></div>
                     </div>
                   </motion.div></AnimatePresence>
@@ -249,7 +273,6 @@ const Product = () => {
           </motion.div>
         </div>
 
-        {/* Reviews Section */}
         <ReviewSection productId={product.id} />
       </div>
 

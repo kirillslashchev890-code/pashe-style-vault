@@ -5,11 +5,12 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { motion } from "framer-motion";
-import { Truck, Store, ArrowLeft } from "lucide-react";
+import { Truck, Store, ArrowLeft, AlertTriangle } from "lucide-react";
 import { useCart } from "@/hooks/useCart";
 import { useOrders } from "@/hooks/useOrders";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
+import { deliveryRegions, getDeliveryCost } from "@/data/deliveryRegions";
 
 const Checkout = () => {
   const { items, subtotal, clearCart } = useCart();
@@ -18,7 +19,7 @@ const Checkout = () => {
   const navigate = useNavigate();
 
   const [deliveryType, setDeliveryType] = useState<"delivery" | "pickup">("delivery");
-  const [city, setCity] = useState("");
+  const [selectedRegion, setSelectedRegion] = useState("");
   const [street, setStreet] = useState("");
   const [apartment, setApartment] = useState("");
   const [zip, setZip] = useState("");
@@ -28,8 +29,13 @@ const Checkout = () => {
 
   const isFirstOrder = orders.length === 0;
   const discount = isFirstOrder ? Math.round(subtotal * 0.1) : 0;
-  const shipping = deliveryType === "pickup" ? 0 : subtotal >= 10000 ? 0 : 500;
-  const total = subtotal - discount + shipping;
+  
+  const regionInfo = selectedRegion ? getDeliveryCost(selectedRegion) : undefined;
+  const shipping = deliveryType === "pickup" ? 0 : (regionInfo?.cost || 0);
+  const freeShippingThreshold = 15000;
+  const isFreeShipping = deliveryType === "delivery" && subtotal >= freeShippingThreshold;
+  const finalShipping = isFreeShipping ? 0 : shipping;
+  const total = subtotal - discount + finalShipping;
 
   useEffect(() => {
     if (!user) navigate("/account");
@@ -45,7 +51,11 @@ const Checkout = () => {
   };
 
   const handleSubmit = async () => {
-    if (deliveryType === "delivery" && (!city.trim() || !street.trim())) {
+    if (deliveryType === "delivery" && !selectedRegion) {
+      toast.error("Выберите регион доставки");
+      return;
+    }
+    if (deliveryType === "delivery" && !street.trim()) {
       toast.error("Заполните адрес доставки");
       return;
     }
@@ -97,24 +107,16 @@ const Checkout = () => {
             <div className="bg-card border border-border rounded-2xl p-6">
               <h2 className="font-semibold text-lg mb-4">Способ получения</h2>
               <div className="grid grid-cols-2 gap-3">
-                <button
-                  onClick={() => setDeliveryType("delivery")}
-                  className={`flex items-center gap-3 p-4 rounded-xl border-2 transition-colors ${
-                    deliveryType === "delivery" ? "border-primary bg-primary/10" : "border-border hover:border-primary/50"
-                  }`}
-                >
+                <button onClick={() => setDeliveryType("delivery")}
+                  className={`flex items-center gap-3 p-4 rounded-xl border-2 transition-colors ${deliveryType === "delivery" ? "border-primary bg-primary/10" : "border-border hover:border-primary/50"}`}>
                   <Truck size={24} className={deliveryType === "delivery" ? "text-primary" : "text-muted-foreground"} />
                   <div className="text-left">
                     <p className="font-medium">Доставка</p>
-                    <p className="text-xs text-muted-foreground">{subtotal >= 10000 ? "Бесплатно" : "500 ₽"}</p>
+                    <p className="text-xs text-muted-foreground">По России, 500-2000 ₽</p>
                   </div>
                 </button>
-                <button
-                  onClick={() => setDeliveryType("pickup")}
-                  className={`flex items-center gap-3 p-4 rounded-xl border-2 transition-colors ${
-                    deliveryType === "pickup" ? "border-primary bg-primary/10" : "border-border hover:border-primary/50"
-                  }`}
-                >
+                <button onClick={() => setDeliveryType("pickup")}
+                  className={`flex items-center gap-3 p-4 rounded-xl border-2 transition-colors ${deliveryType === "pickup" ? "border-primary bg-primary/10" : "border-border hover:border-primary/50"}`}>
                   <Store size={24} className={deliveryType === "pickup" ? "text-primary" : "text-muted-foreground"} />
                   <div className="text-left">
                     <p className="font-medium">Самовывоз</p>
@@ -124,20 +126,38 @@ const Checkout = () => {
               </div>
             </div>
 
-            {/* Address */}
+            {/* Address / Region */}
             {deliveryType === "delivery" ? (
               <div className="bg-card border border-border rounded-2xl p-6">
                 <h2 className="font-semibold text-lg mb-4">Адрес доставки</h2>
+                
+                {/* International shipping notice */}
+                <div className="flex items-center gap-2 p-3 mb-4 bg-destructive/10 border border-destructive/20 rounded-lg text-destructive text-sm">
+                  <AlertTriangle size={16} className="shrink-0" />
+                  Доставка осуществляется только по территории России. Международная доставка недоступна.
+                </div>
+
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div>
-                    <Label>Город</Label>
-                    <Input value={city} onChange={(e) => setCity(e.target.value)} placeholder="Москва" className="mt-1.5 h-12" />
+                  <div className="sm:col-span-2">
+                    <Label>Регион</Label>
+                    <select
+                      value={selectedRegion}
+                      onChange={(e) => setSelectedRegion(e.target.value)}
+                      className="w-full mt-1.5 h-12 px-3 bg-background border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                    >
+                      <option value="">Выберите регион</option>
+                      {deliveryRegions.map((r) => (
+                        <option key={r.name} value={r.name}>
+                          {r.name} — {r.cost} ₽ ({r.days})
+                        </option>
+                      ))}
+                    </select>
                   </div>
                   <div>
                     <Label>Индекс</Label>
                     <Input value={zip} onChange={(e) => setZip(e.target.value.replace(/\D/g, "").slice(0, 6))} placeholder="101000" className="mt-1.5 h-12" />
                   </div>
-                  <div className="sm:col-span-2">
+                  <div>
                     <Label>Улица, дом</Label>
                     <Input value={street} onChange={(e) => setStreet(e.target.value)} placeholder="ул. Тверская, д. 1" className="mt-1.5 h-12" />
                   </div>
@@ -146,6 +166,16 @@ const Checkout = () => {
                     <Input value={apartment} onChange={(e) => setApartment(e.target.value)} placeholder="кв. 10" className="mt-1.5 h-12" />
                   </div>
                 </div>
+
+                {regionInfo && (
+                  <div className="mt-4 p-3 bg-secondary/50 rounded-lg text-sm">
+                    <p>📦 Доставка в <strong>{regionInfo.name}</strong>: <strong>{isFreeShipping ? "Бесплатно" : `${regionInfo.cost} ₽`}</strong></p>
+                    <p className="text-muted-foreground">Срок: {regionInfo.days}</p>
+                    {!isFreeShipping && subtotal < freeShippingThreshold && (
+                      <p className="text-primary mt-1">Бесплатная доставка при заказе от {formatPrice(freeShippingThreshold)}</p>
+                    )}
+                  </div>
+                )}
               </div>
             ) : (
               <div className="bg-card border border-border rounded-2xl p-6">
@@ -166,13 +196,7 @@ const Checkout = () => {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <Label>Телефон</Label>
-                  <Input
-                    value={phone}
-                    onChange={(e) => handlePhoneChange(e.target.value)}
-                    placeholder="89627923580"
-                    className="mt-1.5 h-12"
-                    maxLength={11}
-                  />
+                  <Input value={phone} onChange={(e) => handlePhoneChange(e.target.value)} placeholder="89627923580" className="mt-1.5 h-12" maxLength={11} />
                   <p className="text-xs text-muted-foreground mt-1">11 цифр, начиная с 8</p>
                 </div>
                 <div>
@@ -182,13 +206,9 @@ const Checkout = () => {
               </div>
               <div className="mt-4">
                 <Label>Комментарий к заказу</Label>
-                <textarea
-                  value={notes}
-                  onChange={(e) => setNotes(e.target.value)}
+                <textarea value={notes} onChange={(e) => setNotes(e.target.value)}
                   className="w-full mt-1.5 bg-background border border-border rounded-lg p-3 text-sm resize-none h-20 focus:outline-none focus:ring-2 focus:ring-ring"
-                  placeholder="Пожелания по доставке..."
-                  maxLength={500}
-                />
+                  placeholder="Пожелания по доставке..." maxLength={500} />
               </div>
             </div>
           </div>
@@ -222,18 +242,14 @@ const Checkout = () => {
                 )}
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">Доставка</span>
-                  <span>{shipping === 0 ? "Бесплатно" : formatPrice(shipping)}</span>
+                  <span>{finalShipping === 0 ? "Бесплатно" : formatPrice(finalShipping)}</span>
                 </div>
                 <div className="border-t border-border pt-3 flex justify-between text-lg font-bold">
                   <span>Итого</span>
                   <span>{formatPrice(total)}</span>
                 </div>
               </div>
-              <Button
-                className="w-full btn-gold py-6 mt-6"
-                onClick={handleSubmit}
-                disabled={isOrdering}
-              >
+              <Button className="w-full btn-gold py-6 mt-6" onClick={handleSubmit} disabled={isOrdering}>
                 {isOrdering ? "Оформление..." : `Оформить заказ • ${formatPrice(total)}`}
               </Button>
             </div>
