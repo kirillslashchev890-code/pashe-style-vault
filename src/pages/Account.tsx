@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { motion } from "framer-motion";
-import { User, Package, Heart, LogOut, Settings, Mail, Lock, Eye, EyeOff, AlertCircle, ArrowLeft, CheckCircle, Trash2, Camera } from "lucide-react";
+import { User, Package, Heart, LogOut, Settings, Mail, Lock, Eye, EyeOff, AlertCircle, Trash2, Camera, CheckCircle } from "lucide-react";
 import { z } from "zod";
 import { useAuth } from "@/hooks/useAuth";
 import { useWishlist } from "@/hooks/useWishlist";
@@ -14,21 +14,20 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
 type TabType = "profile" | "orders" | "wishlist" | "settings";
-type AuthMode = "login" | "register" | "forgot";
+type AuthMode = "login" | "register";
 
 const emailSchema = z.string().trim().email({ message: "Введите корректный email (нужен символ @)" });
 const passwordSchema = z.string().min(6, { message: "Пароль должен содержать минимум 6 символов" });
 const nameSchema = z.string().trim().min(2, { message: "Имя должно содержать минимум 2 символа" });
 
 const Account = () => {
-  const { user, isLoading: authLoading, signIn, signUp, signOut, resetPassword } = useAuth();
+  const { user, isLoading: authLoading, signIn, signUp, signOut } = useAuth();
   const { items: wishlistItems, removeFromWishlist } = useWishlist();
   const { orders, statusLabels } = useOrders();
   const [activeTab, setActiveTab] = useState<TabType>("profile");
   const [authMode, setAuthMode] = useState<AuthMode>("login");
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [successMessage, setSuccessMessage] = useState("");
   const avatarRef = useRef<HTMLInputElement>(null);
 
   const [email, setEmail] = useState("");
@@ -44,6 +43,11 @@ const Account = () => {
   const [profileZip, setProfileZip] = useState("");
   const [profileAvatar, setProfileAvatar] = useState<string | null>(null);
   const [profileSaving, setProfileSaving] = useState(false);
+
+  // Password change
+  const [newPassword, setNewPassword] = useState("");
+  const [newPasswordConfirm, setNewPasswordConfirm] = useState("");
+  const [passwordChanging, setPasswordChanging] = useState(false);
 
   const [emailError, setEmailError] = useState("");
   const [passwordError, setPasswordError] = useState("");
@@ -86,10 +90,8 @@ const Account = () => {
     if (!file || !user) return;
     const ext = file.name.split(".").pop();
     const path = `${user.id}/avatar.${ext}`;
-
     const { error } = await supabase.storage.from("avatars").upload(path, file, { upsert: true });
     if (error) { toast.error("Ошибка загрузки аватарки"); return; }
-
     const { data: urlData } = supabase.storage.from("avatars").getPublicUrl(path);
     const avatarUrl = urlData.publicUrl + "?t=" + Date.now();
     await supabase.from("profiles").update({ avatar_url: avatarUrl } as any).eq("user_id", user.id);
@@ -100,27 +102,32 @@ const Account = () => {
   const saveProfile = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user) return;
-    if (profilePhone && profilePhone.length !== 11) {
-      toast.error("Номер телефона должен содержать 11 цифр");
-      return;
-    }
+    if (profilePhone && profilePhone.length !== 11) { toast.error("Номер телефона должен содержать 11 цифр"); return; }
     setProfileSaving(true);
     const { error } = await supabase.from("profiles").update({
-      full_name: profileName,
-      phone: profilePhone,
-      address_city: profileCity,
-      address_street: profileStreet,
-      address_apartment: profileApartment,
-      address_zip: profileZip,
+      full_name: profileName, phone: profilePhone,
+      address_city: profileCity, address_street: profileStreet,
+      address_apartment: profileApartment, address_zip: profileZip,
     } as any).eq("user_id", user.id);
     setProfileSaving(false);
     if (error) { toast.error("Ошибка при сохранении"); return; }
     toast.success("Данные сохранены");
   };
 
+  const handlePasswordChange = async () => {
+    if (newPassword.length < 6) { toast.error("Пароль должен содержать минимум 6 символов"); return; }
+    if (newPassword !== newPasswordConfirm) { toast.error("Пароли не совпадают"); return; }
+    setPasswordChanging(true);
+    const { error } = await supabase.auth.updateUser({ password: newPassword });
+    setPasswordChanging(false);
+    if (error) { toast.error("Ошибка при смене пароля: " + error.message); return; }
+    toast.success("Пароль успешно изменён");
+    setNewPassword("");
+    setNewPasswordConfirm("");
+  };
+
   const formatPrice = (price: number) =>
     new Intl.NumberFormat("ru-RU", { style: "currency", currency: "RUB", minimumFractionDigits: 0 }).format(price);
-
   const formatDate = (dateStr: string) =>
     new Date(dateStr).toLocaleDateString("ru-RU", { day: "numeric", month: "long", year: "numeric" });
 
@@ -129,24 +136,12 @@ const Account = () => {
   const validateName = (v: string) => { const r = nameSchema.safeParse(v); if (!r.success) { setNameError(r.error.errors[0].message); return false; } setNameError(""); return true; };
   const validateConfirmPassword = (v: string) => { if (v !== password) { setConfirmPasswordError("Пароли не совпадают"); return false; } setConfirmPasswordError(""); return true; };
 
-  const resetForm = () => { setEmail(""); setPassword(""); setConfirmPassword(""); setName(""); setEmailError(""); setPasswordError(""); setConfirmPasswordError(""); setNameError(""); setGeneralError(""); setSuccessMessage(""); };
+  const resetForm = () => { setEmail(""); setPassword(""); setConfirmPassword(""); setName(""); setEmailError(""); setPasswordError(""); setConfirmPasswordError(""); setNameError(""); setGeneralError(""); };
   const switchAuthMode = (m: AuthMode) => { resetForm(); setAuthMode(m); };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setGeneralError(""); setSuccessMessage("");
-
-    if (authMode === "forgot") {
-      if (!validateEmail(email)) return;
-      setIsLoading(true);
-      const { error } = await resetPassword(email);
-      setIsLoading(false);
-      if (error) { setGeneralError(error); return; }
-      setSuccessMessage("Новый пароль отправлен на вашу почту");
-      setTimeout(() => switchAuthMode("login"), 3000);
-      return;
-    }
-
+    setGeneralError("");
     const isEmailValid = validateEmail(email);
     const isPasswordValid = validatePassword(password);
     let isValid = isEmailValid && isPasswordValid;
@@ -160,7 +155,6 @@ const Account = () => {
       const { error } = await signUp(email, password, name);
       setIsLoading(false);
       if (error) { setGeneralError(error); return; }
-      // auto-confirm enabled, user is logged in automatically
       resetForm();
       return;
     }
@@ -180,20 +174,14 @@ const Account = () => {
         <div className="container mx-auto px-4 py-16 md:py-24">
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="max-w-md mx-auto">
             <div className="text-center mb-8">
-              {authMode === "forgot" && (
-                <button onClick={() => switchAuthMode("login")} className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors mx-auto mb-4">
-                  <ArrowLeft size={18} /> Назад
-                </button>
-              )}
               <h1 className="text-3xl font-bold mb-2">
-                {authMode === "login" ? "Вход" : authMode === "register" ? "Регистрация" : "Восстановление пароля"}
+                {authMode === "login" ? "Вход" : "Регистрация"}
               </h1>
               <p className="text-muted-foreground">
-                {authMode === "login" ? "Войдите в свой аккаунт" : authMode === "register" ? "Создайте аккаунт для покупок" : "Введите email для восстановления пароля"}
+                {authMode === "login" ? "Войдите в свой аккаунт" : "Создайте аккаунт для покупок"}
               </p>
             </div>
             <div className="bg-card rounded-2xl border border-border p-6">
-              {successMessage && <div className="flex items-center gap-2 p-3 mb-4 bg-primary/10 border border-primary/20 rounded-lg text-primary text-sm"><CheckCircle size={16} className="shrink-0" />{successMessage}</div>}
               {generalError && <div className="flex items-center gap-2 p-3 mb-4 bg-destructive/10 border border-destructive/20 rounded-lg text-destructive text-sm"><AlertCircle size={16} className="shrink-0" />{generalError}</div>}
               <form onSubmit={handleSubmit} className="space-y-4">
                 {authMode === "register" && (
@@ -218,22 +206,20 @@ const Account = () => {
                   </div>
                   {emailError && <p className="text-destructive text-sm mt-1">{emailError}</p>}
                 </div>
-                {authMode !== "forgot" && (
-                  <div>
-                    <Label htmlFor="password">Пароль</Label>
-                    <div className="relative mt-1.5">
-                      <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" size={18} />
-                      <Input id="password" type={showPassword ? "text" : "password"} placeholder="••••••••"
-                        className={`pl-10 pr-10 h-12 ${passwordError ? "border-destructive" : ""}`}
-                        value={password} onChange={(e) => { setPassword(e.target.value); if (passwordError) validatePassword(e.target.value); }}
-                        onBlur={() => password && validatePassword(password)} />
-                      <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors">
-                        {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-                      </button>
-                    </div>
-                    {passwordError && <p className="text-destructive text-sm mt-1">{passwordError}</p>}
+                <div>
+                  <Label htmlFor="password">Пароль</Label>
+                  <div className="relative mt-1.5">
+                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" size={18} />
+                    <Input id="password" type={showPassword ? "text" : "password"} placeholder="••••••••"
+                      className={`pl-10 pr-10 h-12 ${passwordError ? "border-destructive" : ""}`}
+                      value={password} onChange={(e) => { setPassword(e.target.value); if (passwordError) validatePassword(e.target.value); }}
+                      onBlur={() => password && validatePassword(password)} />
+                    <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors">
+                      {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                    </button>
                   </div>
-                )}
+                  {passwordError && <p className="text-destructive text-sm mt-1">{passwordError}</p>}
+                </div>
                 {authMode === "register" && (
                   <div>
                     <Label htmlFor="confirmPassword">Подтвердите пароль</Label>
@@ -247,26 +233,19 @@ const Account = () => {
                     {confirmPasswordError && <p className="text-destructive text-sm mt-1">{confirmPasswordError}</p>}
                   </div>
                 )}
-                {authMode === "login" && (
-                  <div className="text-right">
-                    <button type="button" onClick={() => switchAuthMode("forgot")} className="text-primary text-sm hover:underline">Забыли пароль?</button>
-                  </div>
-                )}
                 <Button type="submit" className="w-full btn-gold h-12" disabled={isLoading}>
                   {isLoading ? <span className="flex items-center gap-2"><span className="w-4 h-4 border-2 border-primary-foreground border-t-transparent rounded-full animate-spin" />Загрузка...</span>
-                    : authMode === "forgot" ? "Отправить" : authMode === "login" ? "Войти" : "Зарегистрироваться"}
+                    : authMode === "login" ? "Войти" : "Зарегистрироваться"}
                 </Button>
               </form>
-              {authMode !== "forgot" && (
-                <div className="mt-6 text-center">
-                  <p className="text-muted-foreground text-sm">
-                    {authMode === "login" ? "Нет аккаунта?" : "Уже есть аккаунт?"}{" "}
-                    <button onClick={() => switchAuthMode(authMode === "login" ? "register" : "login")} className="text-primary hover:underline">
-                      {authMode === "login" ? "Зарегистрируйтесь" : "Войдите"}
-                    </button>
-                  </p>
-                </div>
-              )}
+              <div className="mt-6 text-center">
+                <p className="text-muted-foreground text-sm">
+                  {authMode === "login" ? "Нет аккаунта?" : "Уже есть аккаунт?"}{" "}
+                  <button onClick={() => switchAuthMode(authMode === "login" ? "register" : "login")} className="text-primary hover:underline">
+                    {authMode === "login" ? "Зарегистрируйтесь" : "Войдите"}
+                  </button>
+                </p>
+              </div>
             </div>
           </motion.div>
         </div>
@@ -283,22 +262,13 @@ const Account = () => {
           Личный кабинет
         </motion.h1>
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
-          {/* Sidebar */}
           <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} className="lg:col-span-1">
             <div className="bg-card rounded-2xl border border-border p-4">
               <div className="flex items-center gap-3 p-3 mb-4">
-                <div
-                  className="w-12 h-12 rounded-full bg-primary flex items-center justify-center text-primary-foreground font-semibold text-lg overflow-hidden cursor-pointer relative"
-                  onClick={() => avatarRef.current?.click()}
-                >
-                  {profileAvatar ? (
-                    <img src={profileAvatar} alt="avatar" className="w-full h-full object-cover" />
-                  ) : (
-                    displayName.charAt(0).toUpperCase()
-                  )}
-                  <div className="absolute inset-0 bg-background/50 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity">
-                    <Camera size={16} />
-                  </div>
+                <div className="w-12 h-12 rounded-full bg-primary flex items-center justify-center text-primary-foreground font-semibold text-lg overflow-hidden cursor-pointer relative"
+                  onClick={() => avatarRef.current?.click()}>
+                  {profileAvatar ? <img src={profileAvatar} alt="avatar" className="w-full h-full object-cover" /> : displayName.charAt(0).toUpperCase()}
+                  <div className="absolute inset-0 bg-background/50 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity"><Camera size={16} /></div>
                 </div>
                 <div>
                   <p className="font-medium">{displayName}</p>
@@ -323,51 +293,26 @@ const Account = () => {
             </div>
           </motion.div>
 
-          {/* Content */}
           <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="lg:col-span-3">
             <div className="bg-card rounded-2xl border border-border p-6">
               {activeTab === "profile" && (
                 <div>
                   <h2 className="text-xl font-semibold mb-6">Мои данные</h2>
                   <form onSubmit={saveProfile} className="space-y-4 max-w-lg">
-                    <div>
-                      <Label>Имя</Label>
-                      <Input value={profileName} onChange={(e) => setProfileName(e.target.value)} className="mt-1.5 h-12" />
-                    </div>
-                    <div>
-                      <Label>Email</Label>
-                      <Input type="email" defaultValue={user.email || ""} className="mt-1.5 h-12" disabled />
-                    </div>
+                    <div><Label>Имя</Label><Input value={profileName} onChange={(e) => setProfileName(e.target.value)} className="mt-1.5 h-12" /></div>
+                    <div><Label>Email</Label><Input type="email" defaultValue={user.email || ""} className="mt-1.5 h-12" disabled /></div>
                     <div>
                       <Label>Телефон</Label>
-                      <Input
-                        value={profilePhone}
-                        onChange={(e) => handlePhoneChange(e.target.value)}
-                        className="mt-1.5 h-12"
-                        placeholder="89627923580"
-                        maxLength={11}
-                      />
+                      <Input value={profilePhone} onChange={(e) => handlePhoneChange(e.target.value)} className="mt-1.5 h-12" placeholder="89627923580" maxLength={11} />
                       <p className="text-xs text-muted-foreground mt-1">11 цифр, начиная с 8</p>
                     </div>
                     <div className="border-t border-border pt-4 mt-4">
                       <h3 className="font-medium mb-3">Адрес доставки</h3>
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                        <div>
-                          <Label>Город</Label>
-                          <Input value={profileCity} onChange={(e) => setProfileCity(e.target.value)} className="mt-1.5 h-12" placeholder="Москва" />
-                        </div>
-                        <div>
-                          <Label>Индекс</Label>
-                          <Input value={profileZip} onChange={(e) => setProfileZip(e.target.value.replace(/\D/g, "").slice(0, 6))} className="mt-1.5 h-12" placeholder="101000" />
-                        </div>
-                        <div className="sm:col-span-2">
-                          <Label>Улица, дом</Label>
-                          <Input value={profileStreet} onChange={(e) => setProfileStreet(e.target.value)} className="mt-1.5 h-12" placeholder="ул. Тверская, д. 1" />
-                        </div>
-                        <div>
-                          <Label>Квартира</Label>
-                          <Input value={profileApartment} onChange={(e) => setProfileApartment(e.target.value)} className="mt-1.5 h-12" placeholder="кв. 10" />
-                        </div>
+                        <div><Label>Город</Label><Input value={profileCity} onChange={(e) => setProfileCity(e.target.value)} className="mt-1.5 h-12" placeholder="Москва" /></div>
+                        <div><Label>Индекс</Label><Input value={profileZip} onChange={(e) => setProfileZip(e.target.value.replace(/\D/g, "").slice(0, 6))} className="mt-1.5 h-12" placeholder="101000" /></div>
+                        <div className="sm:col-span-2"><Label>Улица, дом</Label><Input value={profileStreet} onChange={(e) => setProfileStreet(e.target.value)} className="mt-1.5 h-12" placeholder="ул. Тверская, д. 1" /></div>
+                        <div><Label>Квартира</Label><Input value={profileApartment} onChange={(e) => setProfileApartment(e.target.value)} className="mt-1.5 h-12" placeholder="кв. 10" /></div>
                       </div>
                     </div>
                     <Button type="submit" className="btn-gold" disabled={profileSaving}>
@@ -459,9 +404,17 @@ const Account = () => {
                     <div>
                       <h3 className="font-medium mb-3">Сменить пароль</h3>
                       <div className="space-y-3">
-                        <div><Label>Текущий пароль</Label><Input type="password" className="mt-1.5 h-12" /></div>
-                        <div><Label>Новый пароль</Label><Input type="password" className="mt-1.5 h-12" /></div>
-                        <Button className="btn-gold">Сменить пароль</Button>
+                        <div>
+                          <Label>Новый пароль</Label>
+                          <Input type="password" className="mt-1.5 h-12" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} placeholder="Минимум 6 символов" />
+                        </div>
+                        <div>
+                          <Label>Подтвердите новый пароль</Label>
+                          <Input type="password" className="mt-1.5 h-12" value={newPasswordConfirm} onChange={(e) => setNewPasswordConfirm(e.target.value)} placeholder="Повторите пароль" />
+                        </div>
+                        <Button className="btn-gold" onClick={handlePasswordChange} disabled={passwordChanging}>
+                          {passwordChanging ? "Смена пароля..." : "Сменить пароль"}
+                        </Button>
                       </div>
                     </div>
                   </div>

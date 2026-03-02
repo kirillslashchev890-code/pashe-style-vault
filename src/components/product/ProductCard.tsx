@@ -8,9 +8,12 @@ import { useWishlist } from "@/hooks/useWishlist";
 
 interface ProductCardProps {
   product: Product;
+  showLowStock?: boolean;
+  lowStockSize?: string;
+  lowStockCount?: number;
 }
 
-const ProductCard = ({ product }: ProductCardProps) => {
+const ProductCard = ({ product, showLowStock, lowStockSize, lowStockCount }: ProductCardProps) => {
   const [authModalOpen, setAuthModalOpen] = useState(false);
   const { user } = useAuth();
   const { isInWishlist, toggleWishlist } = useWishlist();
@@ -46,6 +49,11 @@ const ProductCard = ({ product }: ProductCardProps) => {
           {discount && (
             <span className="bg-destructive text-destructive-foreground text-xs font-semibold px-2.5 py-1 rounded-full">
               -{discount}%
+            </span>
+          )}
+          {showLowStock && lowStockCount != null && lowStockCount <= 10 && (
+            <span className="bg-yellow-500 text-yellow-950 text-xs font-semibold px-2.5 py-1 rounded-full">
+              Осталось {lowStockCount} шт ({lowStockSize})
             </span>
           )}
         </div>
@@ -99,7 +107,6 @@ const ProductCard = ({ product }: ProductCardProps) => {
         </div>
       </div>
       
-      {/* Auth Modal */}
       <AuthModal
         isOpen={authModalOpen}
         onClose={() => setAuthModalOpen(false)}

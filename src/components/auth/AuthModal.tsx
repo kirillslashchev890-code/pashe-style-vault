@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Mail, Lock, User, Eye, EyeOff, AlertCircle, ArrowLeft, CheckCircle } from "lucide-react";
+import { X, Mail, Lock, User, Eye, EyeOff, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -17,14 +17,13 @@ const emailSchema = z.string().trim().email({ message: "Введите корр�
 const passwordSchema = z.string().min(6, { message: "Пароль должен содержать минимум 6 символов" });
 const nameSchema = z.string().trim().min(2, { message: "Имя должно содержать минимум 2 символа" });
 
-type AuthMode = "login" | "register" | "forgot";
+type AuthMode = "login" | "register";
 
 const AuthModal = ({ isOpen, onClose, onSuccess }: AuthModalProps) => {
-  const { signIn, signUp, resetPassword } = useAuth();
+  const { signIn, signUp } = useAuth();
   const [mode, setMode] = useState<AuthMode>("login");
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [successMessage, setSuccessMessage] = useState("");
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -60,24 +59,12 @@ const AuthModal = ({ isOpen, onClose, onSuccess }: AuthModalProps) => {
   const resetForm = () => {
     setEmail(""); setPassword(""); setConfirmPassword(""); setName("");
     setEmailError(""); setPasswordError(""); setConfirmPasswordError(""); setNameError("");
-    setGeneralError(""); setSuccessMessage("");
+    setGeneralError("");
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setGeneralError("");
-    setSuccessMessage("");
-
-    if (mode === "forgot") {
-      if (!validateEmail(email)) return;
-      setIsLoading(true);
-      const { error } = await resetPassword(email);
-      setIsLoading(false);
-      if (error) { setGeneralError(error); return; }
-      setSuccessMessage("Инструкции по восстановлению пароля отправлены на вашу почту");
-      setTimeout(() => { switchMode("login"); }, 3000);
-      return;
-    }
 
     const isEmailValid = validateEmail(email);
     const isPasswordValid = validatePassword(password);
@@ -96,14 +83,12 @@ const AuthModal = ({ isOpen, onClose, onSuccess }: AuthModalProps) => {
       const { error } = await signUp(email, password, name);
       setIsLoading(false);
       if (error) { setGeneralError(error); return; }
-      // Auto-confirm enabled, user logged in automatically
       onSuccess?.();
       onClose();
       resetForm();
       return;
     }
 
-    // Login
     const { error } = await signIn(email, password);
     setIsLoading(false);
     if (error) { setGeneralError(error); return; }
@@ -133,33 +118,13 @@ const AuthModal = ({ isOpen, onClose, onSuccess }: AuthModalProps) => {
           className="bg-card rounded-2xl border border-border p-6 w-full max-w-md shadow-xl"
         >
           <div className="flex items-center justify-between mb-6">
-            {mode === "forgot" ? (
-              <button onClick={() => switchMode("login")} className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors">
-                <ArrowLeft size={18} /> Назад
-              </button>
-            ) : (
-              <h2 className="text-xl font-semibold">
-                {mode === "login" ? "Вход в аккаунт" : "Регистрация"}
-              </h2>
-            )}
+            <h2 className="text-xl font-semibold">
+              {mode === "login" ? "Вход в аккаунт" : "Регистрация"}
+            </h2>
             <button onClick={onClose} className="text-muted-foreground hover:text-foreground transition-colors">
               <X size={20} />
             </button>
           </div>
-
-          {mode === "forgot" && (
-            <div className="mb-6">
-              <h2 className="text-xl font-semibold mb-2">Восстановление пароля</h2>
-              <p className="text-muted-foreground text-sm">Введите email, указанный при регистрации.</p>
-            </div>
-          )}
-
-          {successMessage && (
-            <div className="flex items-center gap-2 p-3 mb-4 bg-primary/10 border border-primary/20 rounded-lg text-primary text-sm">
-              <CheckCircle size={16} className="shrink-0" />
-              {successMessage}
-            </div>
-          )}
 
           {generalError && (
             <div className="flex items-center gap-2 p-3 mb-4 bg-destructive/10 border border-destructive/20 rounded-lg text-destructive text-sm">
@@ -193,22 +158,20 @@ const AuthModal = ({ isOpen, onClose, onSuccess }: AuthModalProps) => {
               {emailError && <p className="text-destructive text-sm mt-1">{emailError}</p>}
             </div>
 
-            {mode !== "forgot" && (
-              <div>
-                <Label htmlFor="modal-password">Пароль</Label>
-                <div className="relative mt-1.5">
-                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" size={18} />
-                  <Input id="modal-password" type={showPassword ? "text" : "password"} placeholder="••••••••"
-                    className={`pl-10 pr-10 h-12 ${passwordError ? "border-destructive" : ""}`}
-                    value={password} onChange={(e) => { setPassword(e.target.value); if (passwordError) validatePassword(e.target.value); }}
-                    onBlur={() => password && validatePassword(password)} />
-                  <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors">
-                    {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-                  </button>
-                </div>
-                {passwordError && <p className="text-destructive text-sm mt-1">{passwordError}</p>}
+            <div>
+              <Label htmlFor="modal-password">Пароль</Label>
+              <div className="relative mt-1.5">
+                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" size={18} />
+                <Input id="modal-password" type={showPassword ? "text" : "password"} placeholder="••••••••"
+                  className={`pl-10 pr-10 h-12 ${passwordError ? "border-destructive" : ""}`}
+                  value={password} onChange={(e) => { setPassword(e.target.value); if (passwordError) validatePassword(e.target.value); }}
+                  onBlur={() => password && validatePassword(password)} />
+                <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors">
+                  {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                </button>
               </div>
-            )}
+              {passwordError && <p className="text-destructive text-sm mt-1">{passwordError}</p>}
+            </div>
 
             {mode === "register" && (
               <div>
@@ -224,32 +187,24 @@ const AuthModal = ({ isOpen, onClose, onSuccess }: AuthModalProps) => {
               </div>
             )}
 
-            {mode === "login" && (
-              <div className="text-right">
-                <button type="button" onClick={() => switchMode("forgot")} className="text-primary text-sm hover:underline">Забыли пароль?</button>
-              </div>
-            )}
-
             <Button type="submit" className="w-full btn-gold h-12" disabled={isLoading}>
               {isLoading ? (
                 <span className="flex items-center gap-2">
                   <span className="w-4 h-4 border-2 border-primary-foreground border-t-transparent rounded-full animate-spin" />
                   Загрузка...
                 </span>
-              ) : mode === "forgot" ? "Отправить инструкции" : mode === "login" ? "Войти" : "Зарегистрироваться"}
+              ) : mode === "login" ? "Войти" : "Зарегистрироваться"}
             </Button>
           </form>
 
-          {mode !== "forgot" && (
-            <div className="mt-6 text-center">
-              <p className="text-muted-foreground text-sm">
-                {mode === "login" ? "Нет аккаунта?" : "Уже есть аккаунт?"}{" "}
-                <button onClick={() => switchMode(mode === "login" ? "register" : "login")} className="text-primary hover:underline">
-                  {mode === "login" ? "Зарегистрируйтесь" : "Войдите"}
-                </button>
-              </p>
-            </div>
-          )}
+          <div className="mt-6 text-center">
+            <p className="text-muted-foreground text-sm">
+              {mode === "login" ? "Нет аккаунта?" : "Уже есть аккаунт?"}{" "}
+              <button onClick={() => switchMode(mode === "login" ? "register" : "login")} className="text-primary hover:underline">
+                {mode === "login" ? "Зарегистрируйтесь" : "Войдите"}
+              </button>
+            </p>
+          </div>
         </motion.div>
       </motion.div>
     </AnimatePresence>
