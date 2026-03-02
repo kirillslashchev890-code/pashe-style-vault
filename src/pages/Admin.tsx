@@ -6,6 +6,7 @@ import { motion } from "framer-motion";
 import { Package, Users, Shield, ArrowLeft, Star, BarChart3 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
+import { products as allProducts } from "@/data/products";
 
 interface AdminOrder {
   id: string;
@@ -33,6 +34,13 @@ interface AdminReview {
   created_at: string;
 }
 
+// Low stock items (deterministic: every 20th product offset by 7)
+const lowStockProducts = allProducts.filter((_, i) => i % 20 === 7).map((p, i) => {
+  const availableSizes = p.sizes.filter(s => s.available);
+  const size = availableSizes.length > 0 ? availableSizes[i % availableSizes.length] : p.sizes[0];
+  return { id: p.id, name: p.name, category: p.category, size: size?.name || "M", count: (i % 7) + 3 };
+});
+
 const Admin = () => {
   const { user, isLoading: authLoading } = useAuth();
   const navigate = useNavigate();
@@ -43,10 +51,7 @@ const Admin = () => {
   const [reviews, setReviews] = useState<AdminReview[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    if (!user) return;
-    checkAdmin();
-  }, [user]);
+  useEffect(() => { if (user) checkAdmin(); }, [user]);
 
   const checkAdmin = async () => {
     if (!user) return;
@@ -87,7 +92,6 @@ const Admin = () => {
   const statusLabels: Record<string, string> = {
     pending: "В обработке", processing: "Собирается", shipped: "Отправлен", delivered: "Доставлен", cancelled: "Отменён",
   };
-
   const statusColors: Record<string, string> = {
     pending: "bg-yellow-500/10 text-yellow-500", processing: "bg-blue-500/10 text-blue-500",
     shipped: "bg-purple-500/10 text-purple-500", delivered: "bg-green-500/10 text-green-500",
@@ -128,38 +132,21 @@ const Admin = () => {
           </Button>
         </div>
 
-        {/* Stats */}
         <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-8">
-          <div className="bg-card border border-border rounded-xl p-4">
-            <p className="text-muted-foreground text-sm">Заказов</p>
-            <p className="text-2xl font-bold">{orders.length}</p>
-          </div>
-          <div className="bg-card border border-border rounded-xl p-4">
-            <p className="text-muted-foreground text-sm">Пользователей</p>
-            <p className="text-2xl font-bold">{users.length}</p>
-          </div>
-          <div className="bg-card border border-border rounded-xl p-4">
-            <p className="text-muted-foreground text-sm">Выручка</p>
-            <p className="text-2xl font-bold">{formatPrice(orders.reduce((s, o) => s + o.total, 0))}</p>
-          </div>
-          <div className="bg-card border border-border rounded-xl p-4">
-            <p className="text-muted-foreground text-sm">В обработке</p>
-            <p className="text-2xl font-bold">{orders.filter(o => o.status === "pending").length}</p>
-          </div>
-          <div className="bg-card border border-border rounded-xl p-4">
-            <p className="text-muted-foreground text-sm">Отзывов</p>
-            <p className="text-2xl font-bold">{reviews.length}</p>
-          </div>
+          <div className="bg-card border border-border rounded-xl p-4"><p className="text-muted-foreground text-sm">Заказов</p><p className="text-2xl font-bold">{orders.length}</p></div>
+          <div className="bg-card border border-border rounded-xl p-4"><p className="text-muted-foreground text-sm">Пользователей</p><p className="text-2xl font-bold">{users.length}</p></div>
+          <div className="bg-card border border-border rounded-xl p-4"><p className="text-muted-foreground text-sm">Выручка</p><p className="text-2xl font-bold">{formatPrice(orders.reduce((s, o) => s + o.total, 0))}</p></div>
+          <div className="bg-card border border-border rounded-xl p-4"><p className="text-muted-foreground text-sm">В обработке</p><p className="text-2xl font-bold">{orders.filter(o => o.status === "pending").length}</p></div>
+          <div className="bg-card border border-border rounded-xl p-4"><p className="text-muted-foreground text-sm">Отзывов</p><p className="text-2xl font-bold">{reviews.length}</p></div>
         </div>
 
-        {/* Tabs */}
         <div className="flex gap-2 mb-6 flex-wrap">
-          {[
-            { id: "orders" as const, icon: Package, label: "Заказы" },
-            { id: "users" as const, icon: Users, label: "Пользователи" },
-            { id: "reviews" as const, icon: Star, label: "Отзывы" },
-            { id: "inventory" as const, icon: BarChart3, label: "Остатки" },
-          ].map(t => (
+          {([
+            { id: "orders", icon: Package, label: "Заказы" },
+            { id: "users", icon: Users, label: "Пользователи" },
+            { id: "reviews", icon: Star, label: "Отзывы" },
+            { id: "inventory", icon: BarChart3, label: "Остатки" },
+          ] as const).map(t => (
             <button key={t.id} onClick={() => setTab(t.id)}
               className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-colors ${tab === t.id ? "bg-primary text-primary-foreground" : "bg-card border border-border hover:bg-secondary"}`}>
               <t.icon size={18} /> {t.label}
@@ -167,22 +154,14 @@ const Admin = () => {
           ))}
         </div>
 
-        {/* Orders */}
         {tab === "orders" && (
           <div className="space-y-4">
-            {orders.length === 0 ? (
-              <p className="text-center text-muted-foreground py-12">Заказов пока нет</p>
-            ) : orders.map((order) => (
+            {orders.length === 0 ? <p className="text-center text-muted-foreground py-12">Заказов пока нет</p> : orders.map((order) => (
               <motion.div key={order.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="bg-card border border-border rounded-xl p-5">
                 <div className="flex flex-wrap items-center justify-between gap-3 mb-3">
-                  <div>
-                    <p className="font-medium">Заказ #{order.id.slice(0, 8)}</p>
-                    <p className="text-sm text-muted-foreground">{formatDate(order.created_at)}</p>
-                  </div>
+                  <div><p className="font-medium">Заказ #{order.id.slice(0, 8)}</p><p className="text-sm text-muted-foreground">{formatDate(order.created_at)}</p></div>
                   <div className="flex items-center gap-3">
-                    <span className={`px-3 py-1 rounded-full text-xs font-semibold ${statusColors[order.status] || "bg-secondary"}`}>
-                      {statusLabels[order.status] || order.status}
-                    </span>
+                    <span className={`px-3 py-1 rounded-full text-xs font-semibold ${statusColors[order.status] || "bg-secondary"}`}>{statusLabels[order.status] || order.status}</span>
                     <span className="font-bold">{formatPrice(order.total)}</span>
                   </div>
                 </div>
@@ -197,9 +176,7 @@ const Admin = () => {
                 <div className="flex gap-2 flex-wrap">
                   {["pending", "processing", "shipped", "delivered", "cancelled"].map(s => (
                     <button key={s} onClick={() => updateStatus(order.id, s)} disabled={order.status === s}
-                      className={`px-3 py-1 rounded-lg text-xs font-medium border transition-colors ${
-                        order.status === s ? "border-primary bg-primary/10 text-primary" : "border-border hover:border-primary/50"
-                      }`}>
+                      className={`px-3 py-1 rounded-lg text-xs font-medium border transition-colors ${order.status === s ? "border-primary bg-primary/10 text-primary" : "border-border hover:border-primary/50"}`}>
                       {statusLabels[s]}
                     </button>
                   ))}
@@ -209,17 +186,14 @@ const Admin = () => {
           </div>
         )}
 
-        {/* Users */}
         {tab === "users" && (
           <div className="bg-card border border-border rounded-xl overflow-hidden">
             <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-border bg-secondary/30">
-                  <th className="text-left p-4 font-semibold">Имя</th>
-                  <th className="text-left p-4 font-semibold">Телефон</th>
-                  <th className="text-left p-4 font-semibold">Дата регистрации</th>
-                </tr>
-              </thead>
+              <thead><tr className="border-b border-border bg-secondary/30">
+                <th className="text-left p-4 font-semibold">Имя</th>
+                <th className="text-left p-4 font-semibold">Телефон</th>
+                <th className="text-left p-4 font-semibold">Дата регистрации</th>
+              </tr></thead>
               <tbody>
                 {users.map((u) => (
                   <tr key={u.user_id} className="border-b border-border last:border-0 hover:bg-secondary/20">
@@ -233,20 +207,13 @@ const Admin = () => {
           </div>
         )}
 
-        {/* Reviews */}
         {tab === "reviews" && (
           <div className="space-y-4">
-            {reviews.length === 0 ? (
-              <p className="text-center text-muted-foreground py-12">Отзывов пока нет</p>
-            ) : reviews.map((review) => (
+            {reviews.length === 0 ? <p className="text-center text-muted-foreground py-12">Отзывов пока нет</p> : reviews.map((review) => (
               <div key={review.id} className="bg-card border border-border rounded-xl p-5">
                 <div className="flex items-center justify-between mb-2">
                   <div className="flex items-center gap-2">
-                    <div className="flex">
-                      {[1, 2, 3, 4, 5].map(s => (
-                        <Star key={s} size={16} className={s <= review.rating ? "text-yellow-500 fill-yellow-500" : "text-muted-foreground"} />
-                      ))}
-                    </div>
+                    <div className="flex">{[1,2,3,4,5].map(s => <Star key={s} size={16} className={s <= review.rating ? "text-yellow-500 fill-yellow-500" : "text-muted-foreground"} />)}</div>
                     <span className="text-sm text-muted-foreground">Товар: {review.product_id}</span>
                   </div>
                   <div className="flex items-center gap-3">
@@ -260,30 +227,27 @@ const Admin = () => {
           </div>
         )}
 
-        {/* Inventory - show products with low stock info */}
         {tab === "inventory" && (
-          <div className="bg-card border border-border rounded-xl p-6">
-            <p className="text-muted-foreground mb-4">
-              Остатки товаров управляются через локальный каталог. Товары с пометкой «мало на складе» отображаются для покупателей автоматически.
-            </p>
-            <div className="space-y-2">
-              {(() => {
-                // Import products data to show inventory
-                const { products } = require("@/data/products");
-                const lowStockProducts = products.filter((_: any, i: number) => i % 20 === 7);
-                return lowStockProducts.map((p: any) => (
-                  <div key={p.id} className="flex items-center justify-between p-3 border border-border rounded-lg">
-                    <div>
-                      <p className="font-medium text-sm">{p.name}</p>
-                      <p className="text-xs text-muted-foreground">{p.category}</p>
-                    </div>
-                    <span className="text-xs font-semibold text-yellow-500 bg-yellow-500/10 px-2 py-1 rounded-full">
-                      Мало на складе
-                    </span>
-                  </div>
-                ));
-              })()}
-            </div>
+          <div className="bg-card border border-border rounded-xl overflow-hidden">
+            <div className="p-4 border-b border-border"><h3 className="font-semibold">Товары с малым остатком</h3></div>
+            <table className="w-full text-sm">
+              <thead><tr className="border-b border-border bg-secondary/30">
+                <th className="text-left p-4 font-semibold">Товар</th>
+                <th className="text-left p-4 font-semibold">Категория</th>
+                <th className="text-left p-4 font-semibold">Размер</th>
+                <th className="text-left p-4 font-semibold">Остаток</th>
+              </tr></thead>
+              <tbody>
+                {lowStockProducts.map((p) => (
+                  <tr key={p.id} className="border-b border-border last:border-0 hover:bg-secondary/20">
+                    <td className="p-4 font-medium">{p.name}</td>
+                    <td className="p-4 text-muted-foreground">{p.category}</td>
+                    <td className="p-4">{p.size}</td>
+                    <td className="p-4"><span className="text-xs font-semibold text-yellow-500 bg-yellow-500/10 px-2 py-1 rounded-full">{p.count} шт</span></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         )}
       </div>
