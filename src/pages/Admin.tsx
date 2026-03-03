@@ -6,7 +6,7 @@ import { motion } from "framer-motion";
 import { Package, Users, Shield, ArrowLeft, Star, BarChart3 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
-import { products as allProducts } from "@/data/products";
+import { useStockManager } from "@/hooks/useStockManager";
 
 interface AdminOrder {
   id: string;
@@ -34,22 +34,40 @@ interface AdminReview {
   created_at: string;
 }
 
-// Low stock items (deterministic: every 20th product offset by 7)
-const lowStockProducts = allProducts.filter((_, i) => i % 20 === 7).map((p, i) => {
-  const availableSizes = p.sizes.filter(s => s.available);
-  const size = availableSizes.length > 0 ? availableSizes[i % availableSizes.length] : p.sizes[0];
-  return { id: p.id, name: p.name, category: p.category, size: size?.name || "M", count: (i % 7) + 3 };
-});
+const ADMIN_EMAIL = "admin@gmail.com";
+const ADMIN_PASSWORD = "admin123";
 
 const Admin = () => {
-  const { user, isLoading: authLoading } = useAuth();
+  const { user, isLoading: authLoading, signIn } = useAuth();
   const navigate = useNavigate();
   const [isAdmin, setIsAdmin] = useState<boolean | null>(null);
+  const [autoLoginAttempted, setAutoLoginAttempted] = useState(false);
   const [tab, setTab] = useState<"orders" | "users" | "reviews" | "inventory">("orders");
   const [orders, setOrders] = useState<AdminOrder[]>([]);
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [reviews, setReviews] = useState<AdminReview[]>([]);
   const [loading, setLoading] = useState(true);
+  const { allLowStock } = useStockManager();
+
+  // Auto-login as admin if not logged in
+  useEffect(() => {
+    if (authLoading) return;
+    if (!user && !autoLoginAttempted) {
+      setAutoLoginAttempted(true);
+      signIn(ADMIN_EMAIL, ADMIN_PASSWORD).then(({ error }) => {
+        if (error) {
+          // Admin account doesn't exist yet, create it
+          supabase.auth.signUp({
+            email: ADMIN_EMAIL,
+            password: ADMIN_PASSWORD,
+            options: { data: { full_name: "Админ" } },
+          }).then(() => {
+            signIn(ADMIN_EMAIL, ADMIN_PASSWORD);
+          });
+        }
+      });
+    }
+  }, [authLoading, user, autoLoginAttempted]);
 
   useEffect(() => { if (user) checkAdmin(); }, [user]);
 
@@ -102,6 +120,8 @@ const Admin = () => {
     new Intl.NumberFormat("ru-RU", { style: "currency", currency: "RUB", minimumFractionDigits: 0 }).format(price);
   const formatDate = (d: string) =>
     new Date(d).toLocaleDateString("ru-RU", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" });
+
+  const lowStockProducts = allLowStock();
 
   if (authLoading || isAdmin === null) {
     return <Layout><div className="container mx-auto px-4 py-24 text-center"><div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin mx-auto" /></div></Layout>;
@@ -243,7 +263,7 @@ const Admin = () => {
                     <td className="p-4 font-medium">{p.name}</td>
                     <td className="p-4 text-muted-foreground">{p.category}</td>
                     <td className="p-4">{p.size}</td>
-                    <td className="p-4"><span className="text-xs font-semibold text-yellow-500 bg-yellow-500/10 px-2 py-1 rounded-full">{p.count} шт</span></td>
+                    <td className="p-4"><span className={`text-xs font-semibold px-2 py-1 rounded-full ${p.count === 0 ? "text-destructive bg-destructive/10" : "text-yellow-500 bg-yellow-500/10"}`}>{p.count} шт</span></td>
                   </tr>
                 ))}
               </tbody>

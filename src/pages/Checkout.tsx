@@ -9,6 +9,7 @@ import { Truck, Store, ArrowLeft, AlertTriangle } from "lucide-react";
 import { useCart } from "@/hooks/useCart";
 import { useOrders } from "@/hooks/useOrders";
 import { useAuth } from "@/hooks/useAuth";
+import { useStockManager } from "@/hooks/useStockManager";
 import { toast } from "sonner";
 import { deliveryRegions, getDeliveryCost } from "@/data/deliveryRegions";
 
@@ -16,6 +17,7 @@ const Checkout = () => {
   const { items, subtotal, clearCart } = useCart();
   const { createOrder, orders } = useOrders();
   const { user } = useAuth();
+  const { decrementStock } = useStockManager();
   const navigate = useNavigate();
 
   const [deliveryType, setDeliveryType] = useState<"delivery" | "pickup">("delivery");
@@ -81,6 +83,11 @@ const Checkout = () => {
       setIsOrdering(false);
       return;
     }
+
+    // Decrement stock for purchased items
+    items.forEach(item => {
+      decrementStock(item.product_id, item.quantity);
+    });
 
     await clearCart();
     toast.success("Заказ успешно оформлен! 🎉");

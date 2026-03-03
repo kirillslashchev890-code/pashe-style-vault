@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { motion } from "framer-motion";
 import { SlidersHorizontal, ChevronDown, X } from "lucide-react";
 import { products, Product } from "@/data/products";
+import { useStockManager } from "@/hooks/useStockManager";
 
 const categories = [
   { id: "all", name: "Все" },
@@ -33,18 +34,6 @@ const seasons = [
   { id: "winter", name: "Зима" },
 ];
 
-// Generate deterministic "low stock" items — 1 per category, every 20th product offset by 7
-const LOW_STOCK_MAP = new Map<string, { size: string; count: number }>();
-products.forEach((p, i) => {
-  if (i % 20 === 7) {
-    const availableSizes = p.sizes.filter(s => s.available);
-    if (availableSizes.length > 0) {
-      const randomSize = availableSizes[i % availableSizes.length];
-      LOW_STOCK_MAP.set(p.id, { size: randomSize.name, count: (i % 7) + 3 }); // 3-9 items
-    }
-  }
-});
-
 const Catalog = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const [isFilterOpen, setIsFilterOpen] = useState(false);
@@ -52,6 +41,7 @@ const Catalog = () => {
   const [priceTo, setPriceTo] = useState("");
   const [selectedSizes, setSelectedSizes] = useState<string[]>([]);
   const [selectedSeason, setSelectedSeason] = useState("all");
+  const { getStock } = useStockManager();
   
   const selectedCategory = searchParams.get("category") || "all";
 
@@ -159,14 +149,14 @@ const Catalog = () => {
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 md:gap-8">
           {filteredProducts.map((product, index) => {
-            const lowStock = LOW_STOCK_MAP.get(product.id);
+            const stockEntry = getStock(product.id);
             return (
               <motion.div key={product.id} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: index * 0.02 }}>
                 <ProductCard
                   product={product}
-                  showLowStock={!!lowStock}
-                  lowStockSize={lowStock?.size}
-                  lowStockCount={lowStock?.count}
+                  showLowStock={!!stockEntry && stockEntry.count <= 10}
+                  lowStockSize={stockEntry?.size}
+                  lowStockCount={stockEntry?.count}
                 />
               </motion.div>
             );

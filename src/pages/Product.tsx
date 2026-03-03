@@ -12,8 +12,9 @@ import ReviewSection from "@/components/product/ReviewSection";
 import { useAuth } from "@/hooks/useAuth";
 import { useCart } from "@/hooks/useCart";
 import { useWishlist } from "@/hooks/useWishlist";
-import { supabase } from "@/integrations/supabase/client";
+import { useStockManager } from "@/hooks/useStockManager";
 import { deliveryRegions } from "@/data/deliveryRegions";
+import { sizeGuideByCategory } from "@/data/sizeGuideLocal";
 
 const Product = () => {
   const { id } = useParams();
@@ -27,30 +28,21 @@ const Product = () => {
   const [sizeGuideOpen, setSizeGuideOpen] = useState(false);
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [authModalOpen, setAuthModalOpen] = useState(false);
-  const [sizeGuideData, setSizeGuideData] = useState<any[]>([]);
   const { user } = useAuth();
   const { addToCart } = useCart();
   const { isInWishlist, toggleWishlist } = useWishlist();
+  const { getStock } = useStockManager();
 
   const product = getProductById(id || "") || products[0];
+  const stockEntry = getStock(product.id);
+  const sizeGuideData = sizeGuideByCategory[product.category] || [];
 
-  // Set default color on mount
   useEffect(() => {
     if (product.colors.length > 0 && !selectedColor) {
       setSelectedColor(product.colors[0].name);
     }
   }, [product.id]);
 
-  useEffect(() => {
-    const fetchSizeGuide = async () => {
-      const { data } = await supabase.from("size_guide").select("*").eq("category_slug", product.category).order("size");
-      if (data) setSizeGuideData(data);
-    };
-    fetchSizeGuide();
-  }, [product.category]);
-
-  // Each color maps to exactly 1 image set. colorImages has 3 photos per color.
-  // When selecting a color, show that color's images.
   const currentImages = selectedColor && product.colorImages?.[selectedColor]
     ? product.colorImages[selectedColor]
     : product.images;
@@ -74,6 +66,11 @@ const Product = () => {
               <img src={currentImages[selectedImage] || currentImages[0]} alt={product.name} className="absolute inset-0 w-full h-full object-cover hover:scale-105 transition-transform duration-300" />
               {discount && <span className="absolute top-4 left-4 bg-destructive text-destructive-foreground text-sm font-semibold px-3 py-1 rounded-full">-{discount}%</span>}
               {product.isNew && <span className="absolute top-4 right-4 bg-primary text-primary-foreground text-sm font-semibold px-3 py-1 rounded-full">NEW</span>}
+              {stockEntry && stockEntry.count <= 10 && (
+                <span className="absolute top-14 left-4 bg-yellow-500 text-yellow-950 text-sm font-semibold px-3 py-1 rounded-full">
+                  Осталось {stockEntry.count} шт ({stockEntry.size})
+                </span>
+              )}
               <div className="absolute inset-0 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity bg-background/20">
                 <span className="bg-background/80 px-3 py-1.5 rounded-full text-sm">Нажмите для увеличения</span>
               </div>
@@ -102,7 +99,7 @@ const Product = () => {
             </div>
             <p className="text-muted-foreground mb-8">{product.description}</p>
 
-            {/* Colors - clicking a color shows that color's photo */}
+            {/* Colors */}
             <div className="mb-6">
               <span className="font-medium block mb-3">Цвет: {selectedColor || "Выберите цвет"}</span>
               <div className="flex gap-2 flex-wrap">
@@ -120,9 +117,11 @@ const Product = () => {
             <div className="mb-6">
               <div className="flex items-center justify-between mb-3">
                 <span className="font-medium">Размер</span>
-                <button onClick={() => setSizeGuideOpen(!sizeGuideOpen)} className="text-primary text-sm hover:underline flex items-center gap-1">
-                  <Ruler size={14} /> Таблица размеров
-                </button>
+                {sizeGuideData.length > 0 && (
+                  <button onClick={() => setSizeGuideOpen(!sizeGuideOpen)} className="text-primary text-sm hover:underline flex items-center gap-1">
+                    <Ruler size={14} /> Таблица размеров
+                  </button>
+                )}
               </div>
               <div className="flex flex-wrap gap-3">
                 {product.sizes.map((size) => (
@@ -170,7 +169,7 @@ const Product = () => {
               </Button>
             </div>
 
-            {/* Size Guide */}
+            {/* Size Guide - LOCAL DATA */}
             {sizeGuideOpen && sizeGuideData.length > 0 && (
               <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} className="mb-8 border border-border rounded-xl overflow-hidden">
                 <div className="p-4 bg-secondary/50"><h3 className="font-semibold flex items-center gap-2"><Ruler size={18} /> Таблица размеров (см)</h3></div>
@@ -178,23 +177,23 @@ const Product = () => {
                   <table className="w-full text-sm">
                     <thead><tr className="border-b border-border bg-secondary/30">
                       <th className="text-left p-3 font-semibold">Размер</th>
-                      {sizeGuideData[0]?.chest_cm != null && <th className="text-center p-3 font-semibold">Грудь</th>}
-                      {sizeGuideData[0]?.waist_cm != null && <th className="text-center p-3 font-semibold">Талия</th>}
-                      {sizeGuideData[0]?.hips_cm != null && <th className="text-center p-3 font-semibold">Бёдра</th>}
-                      {sizeGuideData[0]?.shoulder_cm != null && <th className="text-center p-3 font-semibold">Плечи</th>}
-                      {sizeGuideData[0]?.length_cm != null && <th className="text-center p-3 font-semibold">Длина</th>}
-                      {sizeGuideData[0]?.foot_cm != null && <th className="text-center p-3 font-semibold">Стопа</th>}
+                      {sizeGuideData[0]?.chest != null && <th className="text-center p-3 font-semibold">Грудь</th>}
+                      {sizeGuideData[0]?.waist != null && <th className="text-center p-3 font-semibold">Талия</th>}
+                      {sizeGuideData[0]?.hips != null && <th className="text-center p-3 font-semibold">Бёдра</th>}
+                      {sizeGuideData[0]?.shoulder != null && <th className="text-center p-3 font-semibold">Плечи</th>}
+                      {sizeGuideData[0]?.length != null && <th className="text-center p-3 font-semibold">Длина</th>}
+                      {sizeGuideData[0]?.foot != null && <th className="text-center p-3 font-semibold">Стопа</th>}
                     </tr></thead>
                     <tbody>
                       {sizeGuideData.map((row, i) => (
-                        <tr key={row.id} className={`border-b border-border last:border-0 ${i % 2 !== 0 ? "bg-secondary/20" : ""}`}>
+                        <tr key={row.size} className={`border-b border-border last:border-0 ${i % 2 !== 0 ? "bg-secondary/20" : ""}`}>
                           <td className="p-3 font-medium">{row.size}</td>
-                          {row.chest_cm != null && <td className="text-center p-3">{row.chest_cm}</td>}
-                          {row.waist_cm != null && <td className="text-center p-3">{row.waist_cm}</td>}
-                          {row.hips_cm != null && <td className="text-center p-3">{row.hips_cm}</td>}
-                          {row.shoulder_cm != null && <td className="text-center p-3">{row.shoulder_cm}</td>}
-                          {row.length_cm != null && <td className="text-center p-3">{row.length_cm}</td>}
-                          {row.foot_cm != null && <td className="text-center p-3">{row.foot_cm}</td>}
+                          {sizeGuideData[0]?.chest != null && <td className="text-center p-3">{row.chest ?? "—"}</td>}
+                          {sizeGuideData[0]?.waist != null && <td className="text-center p-3">{row.waist ?? "—"}</td>}
+                          {sizeGuideData[0]?.hips != null && <td className="text-center p-3">{row.hips ?? "—"}</td>}
+                          {sizeGuideData[0]?.shoulder != null && <td className="text-center p-3">{row.shoulder ?? "—"}</td>}
+                          {sizeGuideData[0]?.length != null && <td className="text-center p-3">{row.length ?? "—"}</td>}
+                          {sizeGuideData[0]?.foot != null && <td className="text-center p-3">{row.foot ?? "—"}</td>}
                         </tr>
                       ))}
                     </tbody>
@@ -276,8 +275,8 @@ const Product = () => {
         <ReviewSection productId={product.id} />
       </div>
 
-      <ImageLightbox images={currentImages} initialIndex={selectedImage} isOpen={lightboxOpen} onClose={() => setLightboxOpen(false)} />
-      <AuthModal isOpen={authModalOpen} onClose={() => setAuthModalOpen(false)} onSuccess={() => setAuthModalOpen(false)} />
+      <ImageLightbox images={currentImages} isOpen={lightboxOpen} onClose={() => setLightboxOpen(false)} initialIndex={selectedImage} />
+      <AuthModal isOpen={authModalOpen} onClose={() => setAuthModalOpen(false)} />
     </Layout>
   );
 };
