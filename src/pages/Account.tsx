@@ -1,11 +1,11 @@
 import { useState, useEffect, useRef } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import Layout from "@/components/layout/Layout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { motion } from "framer-motion";
-import { User, Package, Heart, LogOut, Settings, Mail, Lock, Eye, EyeOff, AlertCircle, Trash2, Camera, CheckCircle } from "lucide-react";
+import { User, Package, Heart, LogOut, Settings, Mail, Lock, Eye, EyeOff, AlertCircle, Trash2, Camera, Shield } from "lucide-react";
 import { z } from "zod";
 import { useAuth } from "@/hooks/useAuth";
 import { useWishlist } from "@/hooks/useWishlist";
@@ -16,9 +16,9 @@ import { toast } from "sonner";
 type TabType = "profile" | "orders" | "wishlist" | "settings";
 type AuthMode = "login" | "register";
 
-const emailSchema = z.string().trim().email({ message: "Введите корректный email (нужен символ @)" });
-const passwordSchema = z.string().min(6, { message: "Пароль должен содержать минимум 6 символов" });
-const nameSchema = z.string().trim().min(2, { message: "Имя должно содержать минимум 2 символа" });
+const emailSchema = z.string().trim().email({ message: "Введите корректный email (нужен символ @)" }).max(255, { message: "Email слишком длинный" });
+const passwordSchema = z.string().min(6, { message: "Пароль должен содержать минимум 6 символов" }).max(72, { message: "Пароль слишком длинный" });
+const nameSchema = z.string().trim().min(2, { message: "Имя должно содержать минимум 2 символа" }).max(60, { message: "Имя слишком длинное" });
 
 const Account = () => {
   const { user, isLoading: authLoading, signIn, signUp, signOut } = useAuth();
@@ -28,7 +28,9 @@ const Account = () => {
   const [authMode, setAuthMode] = useState<AuthMode>("login");
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
   const avatarRef = useRef<HTMLInputElement>(null);
+  const navigate = useNavigate();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -78,6 +80,26 @@ const Account = () => {
       }
     };
     loadProfile();
+  }, [user]);
+
+  useEffect(() => {
+    if (!user) {
+      setIsAdmin(false);
+      return;
+    }
+
+    const loadRole = async () => {
+      const { data } = await supabase
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", user.id)
+        .eq("role", "admin")
+        .maybeSingle();
+
+      setIsAdmin(!!data);
+    };
+
+    loadRole();
   }, [user]);
 
   const handlePhoneChange = (val: string) => {
@@ -161,6 +183,25 @@ const Account = () => {
     const { error } = await signIn(email, password);
     setIsLoading(false);
     if (error) { setGeneralError(error); return; }
+
+    const normalizedEmail = email.trim().toLowerCase();
+    if (normalizedEmail === "admin1@gmail.com") {
+      const { data: currentUserData } = await supabase.auth.getUser();
+      const signedInUser = currentUserData.user;
+      if (signedInUser) {
+        const { data: adminRole } = await supabase
+          .from("user_roles")
+          .select("role")
+          .eq("user_id", signedInUser.id)
+          .eq("role", "admin")
+          .maybeSingle();
+
+        if (adminRole) {
+          navigate("/admin");
+        }
+      }
+    }
+
     resetForm();
   };
 
@@ -190,7 +231,7 @@ const Account = () => {
                     <div className="relative mt-1.5">
                       <User className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" size={18} />
                       <Input id="name" type="text" placeholder="Ваше имя" className={`pl-10 h-12 ${nameError ? "border-destructive" : ""}`}
-                        value={name} onChange={(e) => { setName(e.target.value); if (nameError) validateName(e.target.value); }}
+                        value={name} maxLength={60} onChange={(e) => { setName(e.target.value); if (nameError) validateName(e.target.value); }}
                         onBlur={() => name && validateName(name)} />
                     </div>
                     {nameError && <p className="text-destructive text-sm mt-1">{nameError}</p>}
@@ -201,7 +242,7 @@ const Account = () => {
                   <div className="relative mt-1.5">
                     <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" size={18} />
                     <Input id="email" type="email" placeholder="email@example.com" className={`pl-10 h-12 ${emailError ? "border-destructive" : ""}`}
-                      value={email} onChange={(e) => { setEmail(e.target.value); if (emailError) validateEmail(e.target.value); }}
+                      value={email} maxLength={255} onChange={(e) => { setEmail(e.target.value.trim()); if (emailError) validateEmail(e.target.value); }}
                       onBlur={() => email && validateEmail(email)} />
                   </div>
                   {emailError && <p className="text-destructive text-sm mt-1">{emailError}</p>}
@@ -212,7 +253,7 @@ const Account = () => {
                     <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" size={18} />
                     <Input id="password" type={showPassword ? "text" : "password"} placeholder="••••••••"
                       className={`pl-10 pr-10 h-12 ${passwordError ? "border-destructive" : ""}`}
-                      value={password} onChange={(e) => { setPassword(e.target.value); if (passwordError) validatePassword(e.target.value); }}
+                      value={password} maxLength={72} onChange={(e) => { setPassword(e.target.value); if (passwordError) validatePassword(e.target.value); }}
                       onBlur={() => password && validatePassword(password)} />
                     <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors">
                       {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
@@ -227,7 +268,7 @@ const Account = () => {
                       <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" size={18} />
                       <Input id="confirmPassword" type={showPassword ? "text" : "password"} placeholder="••••••••"
                         className={`pl-10 h-12 ${confirmPasswordError ? "border-destructive" : ""}`}
-                        value={confirmPassword} onChange={(e) => { setConfirmPassword(e.target.value); if (confirmPasswordError) validateConfirmPassword(e.target.value); }}
+                        value={confirmPassword} maxLength={72} onChange={(e) => { setConfirmPassword(e.target.value); if (confirmPasswordError) validateConfirmPassword(e.target.value); }}
                         onBlur={() => confirmPassword && validateConfirmPassword(confirmPassword)} />
                     </div>
                     {confirmPasswordError && <p className="text-destructive text-sm mt-1">{confirmPasswordError}</p>}
@@ -286,6 +327,14 @@ const Account = () => {
                     )}
                   </button>
                 ))}
+                {isAdmin && (
+                  <button
+                    onClick={() => navigate("/admin")}
+                    className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-left bg-primary/10 text-primary hover:bg-primary/20 transition-colors"
+                  >
+                    <Shield size={18} /> Админ-панель
+                  </button>
+                )}
                 <button onClick={() => signOut()} className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-left text-destructive hover:bg-destructive/10 transition-colors">
                   <LogOut size={18} /> Выйти
                 </button>
@@ -353,6 +402,15 @@ const Account = () => {
                               </div>
                             ))}
                           </div>
+                          {order.shipping_address?.deliveryType === "delivery" && (
+                            <div className="mt-3 text-xs text-muted-foreground space-y-1 border-t border-border pt-3">
+                              <p>Куда едет: {[order.shipping_address.region, order.shipping_address.city, order.shipping_address.street].filter(Boolean).join(", ")}</p>
+                              <p>Срок: {order.shipping_address.delivery_days || "—"}</p>
+                              {order.shipping_address.eta_date && (
+                                <p>Ожидаемая дата: {new Date(order.shipping_address.eta_date).toLocaleDateString("ru-RU", { day: "numeric", month: "long" })}</p>
+                              )}
+                            </div>
+                          )}
                           <div className="border-t border-border mt-3 pt-3 flex justify-between font-semibold">
                             <span>Итого</span>
                             <span>{formatPrice(order.total)}</span>

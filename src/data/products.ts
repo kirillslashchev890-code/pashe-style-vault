@@ -64,7 +64,7 @@ export interface Product {
   composition: string;
   care: string;
   country: string;
-  // 🎨 Изображения для каждого цвета: { "Чёрный": [front, side, back], ... }
+  // 🎨 Изображения для каждого цвета: { "Чёрный": [front], ... }
   colorImages: Record<string, string[]>;
   // Изображения по умолчанию (первый цвет)
   images: string[];
@@ -78,12 +78,10 @@ export interface Product {
 // 🔧 ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ
 // ============================================
 
-// Генерация путей к фото товара
+// Генерация путей к фото товара (один ракурс на цвет)
 // 📁 Формат: /images/products/{категория}/{id}/{цвет}/front.jpg
 const pi = (cat: string, id: string, colorFolder: string): string[] => [
   `/images/products/${cat}/${id}/${colorFolder}/front.jpg`,
-  `/images/products/${cat}/${id}/${colorFolder}/side.jpg`,
-  `/images/products/${cat}/${id}/${colorFolder}/back.jpg`,
 ];
 
 // Генерация colorImages из массива цветов

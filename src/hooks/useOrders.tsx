@@ -11,12 +11,33 @@ export interface OrderItemData {
   price: number;
 }
 
+export interface ShippingAddressData {
+  deliveryType: "delivery" | "pickup";
+  region?: string;
+  city?: string;
+  street?: string;
+  apartment?: string;
+  zip?: string;
+  delivery_days?: string;
+  eta_date?: string;
+  pickup_point?: string;
+}
+
 export interface OrderData {
   id: string;
   status: string;
   total: number;
   created_at: string;
+  phone: string | null;
+  notes: string | null;
+  shipping_address: ShippingAddressData | null;
   items: OrderItemData[];
+}
+
+interface CreateOrderMeta {
+  phone?: string;
+  notes?: string;
+  shippingAddress?: ShippingAddressData | null;
 }
 
 export const useOrders = () => {
@@ -34,7 +55,7 @@ export const useOrders = () => {
     const { data, error } = await supabase
       .from("orders")
       .select(`
-        id, status, total, created_at,
+        id, status, total, created_at, phone, notes, shipping_address,
         order_items ( id, product_name, size, color_name, quantity, price )
       `)
       .eq("user_id", user.id)
@@ -51,6 +72,9 @@ export const useOrders = () => {
       status: order.status,
       total: order.total,
       created_at: order.created_at,
+      phone: order.phone || null,
+      notes: order.notes || null,
+      shipping_address: (order.shipping_address as ShippingAddressData | null) || null,
       items: order.order_items || [],
     }));
 
@@ -62,7 +86,7 @@ export const useOrders = () => {
     fetchOrders();
   }, [fetchOrders]);
 
-  const createOrder = async (cartItems: any[], total: number) => {
+  const createOrder = async (cartItems: any[], total: number, meta?: CreateOrderMeta) => {
     if (!user) return { error: "Not authenticated" };
 
     const { data: order, error: orderError } = await supabase
@@ -71,13 +95,16 @@ export const useOrders = () => {
         user_id: user.id,
         total,
         status: "pending",
-      })
+        phone: meta?.phone || null,
+        notes: meta?.notes || null,
+        shipping_address: (meta?.shippingAddress as any) || null,
+      } as any)
       .select()
       .single();
 
     if (orderError) return { error: orderError.message };
 
-    const orderItems = cartItems.map(item => ({
+    const orderItems = cartItems.map((item) => ({
       order_id: order.id,
       product_id: item.product_id,
       product_name: item.product_name,
@@ -87,9 +114,7 @@ export const useOrders = () => {
       price: item.product_price,
     }));
 
-    const { error: itemsError } = await supabase
-      .from("order_items")
-      .insert(orderItems);
+    const { error: itemsError } = await supabase.from("order_items").insert(orderItems);
 
     if (itemsError) return { error: itemsError.message };
 
@@ -98,9 +123,9 @@ export const useOrders = () => {
   };
 
   const statusLabels: Record<string, string> = {
-    pending: "В обработке",
-    processing: "Собирается",
-    shipped: "Отправлен",
+    pending: "Ожидание подтверждения",
+    processing: "Подтверждён",
+    shipped: "В пути",
     delivered: "Доставлен",
     cancelled: "Отменён",
   };

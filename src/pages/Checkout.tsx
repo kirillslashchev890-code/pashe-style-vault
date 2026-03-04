@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import Layout from "@/components/layout/Layout";
 import { Button } from "@/components/ui/button";
@@ -6,12 +6,15 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { motion } from "framer-motion";
 import { Truck, Store, ArrowLeft, AlertTriangle } from "lucide-react";
+import { z } from "zod";
 import { useCart } from "@/hooks/useCart";
 import { useOrders } from "@/hooks/useOrders";
 import { useAuth } from "@/hooks/useAuth";
 import { useStockManager } from "@/hooks/useStockManager";
 import { toast } from "sonner";
-import { deliveryRegions, getDeliveryCost } from "@/data/deliveryRegions";
+import { deliveryRegions, getDeliveryCost, getCitiesByRegion } from "@/data/deliveryRegions";
+
+const phoneSchema = z.string().regex(/^8\d{10}$/, { message: "Введите номер в формате 8XXXXXXXXXX" });
 
 const Checkout = () => {
   const { items, subtotal, clearCart } = useCart();
@@ -22,6 +25,7 @@ const Checkout = () => {
 
   const [deliveryType, setDeliveryType] = useState<"delivery" | "pickup">("delivery");
   const [selectedRegion, setSelectedRegion] = useState("");
+  const [selectedCity, setSelectedCity] = useState("");
   const [street, setStreet] = useState("");
   const [apartment, setApartment] = useState("");
   const [zip, setZip] = useState("");
@@ -31,8 +35,9 @@ const Checkout = () => {
 
   const isFirstOrder = orders.length === 0;
   const discount = isFirstOrder ? Math.round(subtotal * 0.1) : 0;
-  
+
   const regionInfo = selectedRegion ? getDeliveryCost(selectedRegion) : undefined;
+  const availableCities = useMemo(() => getCitiesByRegion(selectedRegion), [selectedRegion]);
   const shipping = deliveryType === "pickup" ? 0 : (regionInfo?.cost || 0);
   const freeShippingThreshold = 15000;
   const isFreeShipping = deliveryType === "delivery" && subtotal >= freeShippingThreshold;
@@ -42,14 +47,40 @@ const Checkout = () => {
   useEffect(() => {
     if (!user) navigate("/account");
     if (items.length === 0) navigate("/cart");
-  }, [user, items]);
+  }, [user, items, navigate]);
+
+  useEffect(() => {
+    if (!selectedRegion) {
+      setSelectedCity("");
+      return;
+    }
+
+    if (selectedCity && !availableCities.includes(selectedCity)) {
+      setSelectedCity("");
+    }
+  }, [selectedRegion, selectedCity, availableCities]);
 
   const formatPrice = (price: number) =>
     new Intl.NumberFormat("ru-RU", { style: "currency", currency: "RUB", minimumFractionDigits: 0 }).format(price);
 
-  const handlePhoneChange = (val: string) => {
-    const digits = val.replace(/\D/g, "").slice(0, 11);
-    setPhone(digits);
+  const handlePhoneChange = (value: string) => {
+    const digits = value.replace(/\D/g, "").slice(0, 11);
+    if (!digits) {
+      setPhone("");
+      return;
+    }
+
+    let normalized = digits;
+    if (normalized.startsWith("7")) normalized = `8${normalized.slice(1)}`;
+    if (!normalized.startsWith("8")) normalized = `8${normalized.slice(1)}`;
+
+    setPhone(normalized.slice(0, 11));
+  };
+
+  const parseMinDays = (days: string | undefined) => {
+    if (!days) return 0;
+    const match = days.match(/\d+/);
+    return match ? Number(match[0]) : 0;
   };
 
   const handleSubmit = async () => {
@@ -57,18 +88,35 @@ const Checkout = () => {
       toast.error("Выберите регион доставки");
       return;
     }
-    if (deliveryType === "delivery" && !street.trim()) {
-      toast.error("Заполните адрес доставки");
+
+    if (deliveryType === "delivery" && !selectedCity) {
+      toast.error("Выберите город доставки");
       return;
     }
-    if (!phone || phone.length !== 11) {
-      toast.error("Введите корректный номер телефона (11 цифр)");
+
+    const safeStreet = street.trim().slice(0, 120);
+    const safeApartment = apartment.trim().slice(0, 40);
+    const safeNotes = notes.trim().slice(0, 500);
+
+    if (deliveryType === "delivery" && safeStreet.length < 5) {
+      toast.error("Введите корректный адрес (минимум 5 символов)");
+      return;
+    }
+
+    if (deliveryType === "delivery" && zip && zip.length !== 6) {
+      toast.error("Индекс должен содержать 6 цифр");
+      return;
+    }
+
+    const parsedPhone = phoneSchema.safeParse(phone);
+    if (!parsedPhone.success) {
+      toast.error("Введите корректный номер телефона (11 цифр, начинается с 8)");
       return;
     }
 
     setIsOrdering(true);
 
-    const orderItems = items.map(item => ({
+    const orderItems = items.map((item) => ({
       product_id: item.product_id,
       product_name: item.product_name,
       size: item.size,
@@ -77,15 +125,41 @@ const Checkout = () => {
       product_price: item.product_price,
     }));
 
-    const { error } = await createOrder(orderItems, total);
+    const minDays = parseMinDays(regionInfo?.days);
+    const eta = new Date();
+    eta.setDate(eta.getDate() + minDays);
+
+    const shippingAddress = deliveryType === "pickup"
+      ? {
+          deliveryType: "pickup" as const,
+          pickup_point: "Москва, ул. Тверская, 1",
+          delivery_days: "Самовывоз сегодня",
+          eta_date: new Date().toISOString(),
+        }
+      : {
+          deliveryType: "delivery" as const,
+          region: selectedRegion,
+          city: selectedCity,
+          street: safeStreet,
+          apartment: safeApartment || undefined,
+          zip: zip || undefined,
+          delivery_days: regionInfo?.days,
+          eta_date: eta.toISOString(),
+        };
+
+    const { error } = await createOrder(orderItems, total, {
+      phone: parsedPhone.data,
+      notes: safeNotes || undefined,
+      shippingAddress,
+    });
+
     if (error) {
       toast.error("Ошибка при оформлении заказа");
       setIsOrdering(false);
       return;
     }
 
-    // Decrement stock for purchased items
-    items.forEach(item => {
+    items.forEach((item) => {
       decrementStock(item.product_id, item.quantity);
     });
 
@@ -110,7 +184,6 @@ const Checkout = () => {
 
         <div className="grid grid-cols-1 lg:grid-cols-5 gap-8">
           <div className="lg:col-span-3 space-y-6">
-            {/* Delivery type */}
             <div className="bg-card border border-border rounded-2xl p-6">
               <h2 className="font-semibold text-lg mb-4">Способ получения</h2>
               <div className="grid grid-cols-2 gap-3">
@@ -133,12 +206,10 @@ const Checkout = () => {
               </div>
             </div>
 
-            {/* Address / Region */}
             {deliveryType === "delivery" ? (
               <div className="bg-card border border-border rounded-2xl p-6">
                 <h2 className="font-semibold text-lg mb-4">Адрес доставки</h2>
-                
-                {/* International shipping notice */}
+
                 <div className="flex items-center gap-2 p-3 mb-4 bg-destructive/10 border border-destructive/20 rounded-lg text-destructive text-sm">
                   <AlertTriangle size={16} className="shrink-0" />
                   Доставка осуществляется только по территории России. Международная доставка недоступна.
@@ -149,7 +220,10 @@ const Checkout = () => {
                     <Label>Регион</Label>
                     <select
                       value={selectedRegion}
-                      onChange={(e) => setSelectedRegion(e.target.value)}
+                      onChange={(e) => {
+                        setSelectedRegion(e.target.value);
+                        setSelectedCity("");
+                      }}
                       className="w-full mt-1.5 h-12 px-3 bg-background border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-ring"
                     >
                       <option value="">Выберите регион</option>
@@ -160,23 +234,41 @@ const Checkout = () => {
                       ))}
                     </select>
                   </div>
+
+                  <div className="sm:col-span-2">
+                    <Label>Город</Label>
+                    <select
+                      value={selectedCity}
+                      onChange={(e) => setSelectedCity(e.target.value)}
+                      disabled={!selectedRegion}
+                      className="w-full mt-1.5 h-12 px-3 bg-background border border-border rounded-lg text-sm disabled:opacity-60 focus:outline-none focus:ring-2 focus:ring-ring"
+                    >
+                      <option value="">Выберите город</option>
+                      {availableCities.map((city) => (
+                        <option key={city} value={city}>{city}</option>
+                      ))}
+                    </select>
+                  </div>
+
                   <div>
                     <Label>Индекс</Label>
-                    <Input value={zip} onChange={(e) => setZip(e.target.value.replace(/\D/g, "").slice(0, 6))} placeholder="101000" className="mt-1.5 h-12" />
+                    <Input value={zip} onChange={(e) => setZip(e.target.value.replace(/\D/g, "").slice(0, 6))} placeholder="101000" className="mt-1.5 h-12" maxLength={6} />
                   </div>
+
                   <div>
                     <Label>Улица, дом</Label>
-                    <Input value={street} onChange={(e) => setStreet(e.target.value)} placeholder="ул. Тверская, д. 1" className="mt-1.5 h-12" />
+                    <Input value={street} onChange={(e) => setStreet(e.target.value.slice(0, 120))} placeholder="ул. Тверская, д. 1" className="mt-1.5 h-12" maxLength={120} />
                   </div>
+
                   <div>
                     <Label>Квартира / офис</Label>
-                    <Input value={apartment} onChange={(e) => setApartment(e.target.value)} placeholder="кв. 10" className="mt-1.5 h-12" />
+                    <Input value={apartment} onChange={(e) => setApartment(e.target.value.slice(0, 40))} placeholder="кв. 10" className="mt-1.5 h-12" maxLength={40} />
                   </div>
                 </div>
 
                 {regionInfo && (
                   <div className="mt-4 p-3 bg-secondary/50 rounded-lg text-sm">
-                    <p>📦 Доставка в <strong>{regionInfo.name}</strong>: <strong>{isFreeShipping ? "Бесплатно" : `${regionInfo.cost} ₽`}</strong></p>
+                    <p>📦 Доставка в <strong>{regionInfo.name}</strong>{selectedCity ? `, ${selectedCity}` : ""}: <strong>{isFreeShipping ? "Бесплатно" : `${regionInfo.cost} ₽`}</strong></p>
                     <p className="text-muted-foreground">Срок: {regionInfo.days}</p>
                     {!isFreeShipping && subtotal < freeShippingThreshold && (
                       <p className="text-primary mt-1">Бесплатная доставка при заказе от {formatPrice(freeShippingThreshold)}</p>
@@ -197,7 +289,6 @@ const Checkout = () => {
               </div>
             )}
 
-            {/* Contact */}
             <div className="bg-card border border-border rounded-2xl p-6">
               <h2 className="font-semibold text-lg mb-4">Контактные данные</h2>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -213,14 +304,13 @@ const Checkout = () => {
               </div>
               <div className="mt-4">
                 <Label>Комментарий к заказу</Label>
-                <textarea value={notes} onChange={(e) => setNotes(e.target.value)}
+                <textarea value={notes} onChange={(e) => setNotes(e.target.value.slice(0, 500))}
                   className="w-full mt-1.5 bg-background border border-border rounded-lg p-3 text-sm resize-none h-20 focus:outline-none focus:ring-2 focus:ring-ring"
                   placeholder="Пожелания по доставке..." maxLength={500} />
               </div>
             </div>
           </div>
 
-          {/* Order summary */}
           <div className="lg:col-span-2">
             <div className="bg-card border border-border rounded-2xl p-6 sticky top-24">
               <h2 className="font-semibold text-lg mb-4">Ваш заказ</h2>

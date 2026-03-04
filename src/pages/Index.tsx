@@ -12,7 +12,7 @@ const features = [
   {
     icon: Truck,
     title: "Бесплатная доставка",
-    description: "При заказе от 10 000 ₽",
+    description: "При заказе от 15 000 ₽",
   },
   {
     icon: RefreshCw,
