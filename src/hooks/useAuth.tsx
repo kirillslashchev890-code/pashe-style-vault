@@ -12,6 +12,9 @@ interface AuthContextType {
   resetPassword: (email: string) => Promise<{ error: string | null }>;
 }
 
+const ADMIN_EMAIL = "admin1@gmail.com";
+const ADMIN_PASSWORD = "admin1234";
+
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
@@ -20,22 +23,23 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // Set up auth state listener FIRST
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session);
-      setUser(session?.user ?? null);
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, nextSession) => {
+      setSession(nextSession);
+      setUser(nextSession?.user ?? null);
       setIsLoading(false);
     });
 
-    // THEN check for existing session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
+    supabase.auth.getSession().then(({ data: { session: currentSession } }) => {
+      setSession(currentSession);
+      setUser(currentSession?.user ?? null);
       setIsLoading(false);
     });
 
     return () => subscription.unsubscribe();
   }, []);
+
+  const isAlreadyRegisteredError = (message: string) =>
+    /(already registered|already exists|user already|email.*exists|already been registered)/i.test(message);
 
   const signUp = async (email: string, password: string, fullName: string) => {
     const { error } = await supabase.auth.signUp({
@@ -48,27 +52,38 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     });
 
     if (error) {
-      if (error.message.includes("already registered")) {
-        return { error: "Этот email уже зарегистрирован. Попробуйте войти." };
+      if (isAlreadyRegisteredError(error.message)) {
+        return { error: "Аккаунт с этой почтой уже создан. Войдите в существующий аккаунт." };
       }
       return { error: error.message };
     }
 
-    // Auto-confirm enabled, user is logged in immediately
     return { error: null };
   };
 
   const signIn = async (email: string, password: string) => {
-    const { error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
+    let { error } = await supabase.auth.signInWithPassword({ email, password });
+
+    if (error && email.trim().toLowerCase() === ADMIN_EMAIL && password === ADMIN_PASSWORD && /invalid login credentials/i.test(error.message)) {
+      const { error: signUpError } = await supabase.auth.signUp({
+        email: ADMIN_EMAIL,
+        password: ADMIN_PASSWORD,
+        options: { data: { full_name: "Администратор" } },
+      });
+
+      if (signUpError && !isAlreadyRegisteredError(signUpError.message)) {
+        return { error: signUpError.message };
+      }
+
+      const { error: retryError } = await supabase.auth.signInWithPassword({ email, password });
+      error = retryError ?? null;
+    }
 
     if (error) {
-      if (error.message.includes("Invalid login credentials")) {
+      if (/invalid login credentials/i.test(error.message)) {
         return { error: "Неверный email или пароль" };
       }
-      if (error.message.includes("Email not confirmed")) {
+      if (/email not confirmed/i.test(error.message)) {
         return { error: "Подтвердите email перед входом. Проверьте почту." };
       }
       return { error: error.message };

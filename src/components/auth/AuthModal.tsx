@@ -13,9 +13,9 @@ interface AuthModalProps {
   onSuccess?: () => void;
 }
 
-const emailSchema = z.string().trim().email({ message: "Введите корректный email" });
-const passwordSchema = z.string().min(6, { message: "Пароль должен содержать минимум 6 символов" });
-const nameSchema = z.string().trim().min(2, { message: "Имя должно содержать минимум 2 символа" });
+const emailSchema = z.string().trim().email({ message: "Введите корректный email" }).max(255, { message: "Email слишком длинный" });
+const passwordSchema = z.string().min(6, { message: "Пароль должен содержать минимум 6 символов" }).max(72, { message: "Пароль слишком длинный" });
+const nameSchema = z.string().trim().min(2, { message: "Имя должно содержать минимум 2 символа" }).max(60, { message: "Имя слишком длинное" });
 
 type AuthMode = "login" | "register";
 
@@ -140,7 +140,7 @@ const AuthModal = ({ isOpen, onClose, onSuccess }: AuthModalProps) => {
                 <div className="relative mt-1.5">
                   <User className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" size={18} />
                   <Input id="modal-name" type="text" placeholder="Ваше имя" className={`pl-10 h-12 ${nameError ? "border-destructive" : ""}`}
-                    value={name} onChange={(e) => { setName(e.target.value); if (nameError) validateName(e.target.value); }}
+                    value={name} maxLength={60} onChange={(e) => { setName(e.target.value); if (nameError) validateName(e.target.value); }}
                     onBlur={() => name && validateName(name)} />
                 </div>
                 {nameError && <p className="text-destructive text-sm mt-1">{nameError}</p>}
@@ -152,7 +152,7 @@ const AuthModal = ({ isOpen, onClose, onSuccess }: AuthModalProps) => {
               <div className="relative mt-1.5">
                 <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" size={18} />
                 <Input id="modal-email" type="email" placeholder="email@example.com" className={`pl-10 h-12 ${emailError ? "border-destructive" : ""}`}
-                  value={email} onChange={(e) => { setEmail(e.target.value); if (emailError) validateEmail(e.target.value); }}
+                  value={email} maxLength={255} onChange={(e) => { setEmail(e.target.value.trim()); if (emailError) validateEmail(e.target.value); }}
                   onBlur={() => email && validateEmail(email)} />
               </div>
               {emailError && <p className="text-destructive text-sm mt-1">{emailError}</p>}
@@ -164,7 +164,7 @@ const AuthModal = ({ isOpen, onClose, onSuccess }: AuthModalProps) => {
                 <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" size={18} />
                 <Input id="modal-password" type={showPassword ? "text" : "password"} placeholder="••••••••"
                   className={`pl-10 pr-10 h-12 ${passwordError ? "border-destructive" : ""}`}
-                  value={password} onChange={(e) => { setPassword(e.target.value); if (passwordError) validatePassword(e.target.value); }}
+                  value={password} maxLength={72} onChange={(e) => { setPassword(e.target.value); if (passwordError) validatePassword(e.target.value); }}
                   onBlur={() => password && validatePassword(password)} />
                 <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors">
                   {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
@@ -180,7 +180,7 @@ const AuthModal = ({ isOpen, onClose, onSuccess }: AuthModalProps) => {
                   <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" size={18} />
                   <Input id="modal-confirm" type={showPassword ? "text" : "password"} placeholder="••••••••"
                     className={`pl-10 h-12 ${confirmPasswordError ? "border-destructive" : ""}`}
-                    value={confirmPassword} onChange={(e) => { setConfirmPassword(e.target.value); if (confirmPasswordError) validateConfirmPassword(e.target.value); }}
+                    value={confirmPassword} maxLength={72} onChange={(e) => { setConfirmPassword(e.target.value); if (confirmPasswordError) validateConfirmPassword(e.target.value); }}
                     onBlur={() => confirmPassword && validateConfirmPassword(confirmPassword)} />
                 </div>
                 {confirmPasswordError && <p className="text-destructive text-sm mt-1">{confirmPasswordError}</p>}

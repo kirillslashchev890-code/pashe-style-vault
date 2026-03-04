@@ -14,7 +14,8 @@ const Cart = () => {
   const formatPrice = (price: number) =>
     new Intl.NumberFormat("ru-RU", { style: "currency", currency: "RUB", minimumFractionDigits: 0 }).format(price);
 
-  const shipping = subtotal >= 10000 ? 0 : 500;
+  const freeShippingThreshold = 15000;
+  const shipping = subtotal >= freeShippingThreshold ? 0 : 500;
   const total = subtotal + shipping;
 
   if (isLoading) {
@@ -73,7 +74,7 @@ const Cart = () => {
               <div className="space-y-4 mb-6">
                 <div className="flex justify-between"><span className="text-muted-foreground">Товары ({items.length})</span><span>{formatPrice(subtotal)}</span></div>
                 <div className="flex justify-between"><span className="text-muted-foreground">Доставка</span><span>{shipping === 0 ? "Бесплатно" : formatPrice(shipping)}</span></div>
-                {shipping > 0 && <p className="text-sm text-muted-foreground">До бесплатной доставки осталось {formatPrice(10000 - subtotal)}</p>}
+                {shipping > 0 && <p className="text-sm text-muted-foreground">До бесплатной доставки осталось {formatPrice(Math.max(0, freeShippingThreshold - subtotal))}</p>}
                 <div className="border-t border-border pt-4 flex justify-between text-lg font-semibold"><span>К оплате</span><span>{formatPrice(total)}</span></div>
               </div>
               <Button className="w-full btn-gold py-6 mb-4" onClick={() => {
