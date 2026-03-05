@@ -10,10 +10,11 @@ interface ProductCardProps {
   product: Product;
   showLowStock?: boolean;
   lowStockSize?: string;
+  lowStockColor?: string;
   lowStockCount?: number;
 }
 
-const ProductCard = ({ product, showLowStock, lowStockSize, lowStockCount }: ProductCardProps) => {
+const ProductCard = ({ product, showLowStock, lowStockSize, lowStockColor, lowStockCount }: ProductCardProps) => {
   const [authModalOpen, setAuthModalOpen] = useState(false);
   const { user } = useAuth();
   const { isInWishlist, toggleWishlist } = useWishlist();
