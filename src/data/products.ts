@@ -657,34 +657,150 @@ export const products: Product[] = [
 ];
 
 // ============================================
-// 🔍 ФУНКЦИИ ПОИСКА И ФИЛЬТРАЦИИ
+// 🔍 ФУНКЦИИ ПОИСКА И ФИЛЬТРАЦИИ + УПРАВЛЕНИЕ ИЗ АДМИНКИ
 // ============================================
 
+export interface ProductAdminOverride {
+  price?: number;
+  originalPrice?: number | null;
+  isNew?: boolean;
+  discountUntil?: string | null;
+}
+
+const PRODUCT_OVERRIDES_KEY = "pashe_product_overrides_v1";
+const CUSTOM_PRODUCTS_KEY = "pashe_custom_products_v1";
+
+const canUseStorage = () => typeof window !== "undefined";
+
+const readJson = <T,>(key: string, fallback: T): T => {
+  if (!canUseStorage()) return fallback;
+
+  try {
+    const raw = window.localStorage.getItem(key);
+    if (!raw) return fallback;
+    return JSON.parse(raw) as T;
+  } catch {
+    return fallback;
+  }
+};
+
+const writeJson = (key: string, value: unknown) => {
+  if (!canUseStorage()) return;
+  window.localStorage.setItem(key, JSON.stringify(value));
+};
+
+const normalizeProductState = (product: Product): Product => {
+  const hasDiscount = !!product.originalPrice && product.originalPrice > product.price;
+  return {
+    ...product,
+    isSale: hasDiscount,
+  };
+};
+
+const applyOverride = (product: Product, override?: ProductAdminOverride): Product => {
+  if (!override) return normalizeProductState(product);
+
+  const next: Product = { ...product };
+
+  if (typeof override.price === "number" && Number.isFinite(override.price) && override.price > 0) {
+    next.price = Math.round(override.price);
+  }
+
+  if (override.originalPrice === null) {
+    delete next.originalPrice;
+  } else if (
+    typeof override.originalPrice === "number" &&
+    Number.isFinite(override.originalPrice) &&
+    override.originalPrice > 0
+  ) {
+    next.originalPrice = Math.round(override.originalPrice);
+  }
+
+  if (typeof override.isNew === "boolean") {
+    next.isNew = override.isNew;
+  }
+
+  const isDiscountExpired =
+    !!override.discountUntil &&
+    Number.isFinite(new Date(override.discountUntil).getTime()) &&
+    new Date(override.discountUntil).getTime() < Date.now();
+
+  if (isDiscountExpired) {
+    delete next.originalPrice;
+  }
+
+  return normalizeProductState(next);
+};
+
+export const getProductOverrides = (): Record<string, ProductAdminOverride> => {
+  return readJson<Record<string, ProductAdminOverride>>(PRODUCT_OVERRIDES_KEY, {});
+};
+
+export const upsertProductOverride = (productId: string, override: ProductAdminOverride) => {
+  const current = getProductOverrides();
+  current[productId] = {
+    ...current[productId],
+    ...override,
+  };
+  writeJson(PRODUCT_OVERRIDES_KEY, current);
+};
+
+export const removeProductOverride = (productId: string) => {
+  const current = getProductOverrides();
+  delete current[productId];
+  writeJson(PRODUCT_OVERRIDES_KEY, current);
+};
+
+export const getCustomProducts = (): Product[] => {
+  const custom = readJson<Product[]>(CUSTOM_PRODUCTS_KEY, []);
+  return custom.map(normalizeProductState);
+};
+
+export const saveCustomProduct = (product: Product) => {
+  const custom = getCustomProducts();
+  const next = [
+    ...custom.filter((p) => p.id !== product.id),
+    normalizeProductState(product),
+  ];
+  writeJson(CUSTOM_PRODUCTS_KEY, next);
+};
+
+export const removeCustomProduct = (productId: string) => {
+  const custom = getCustomProducts().filter((p) => p.id !== productId);
+  writeJson(CUSTOM_PRODUCTS_KEY, custom);
+};
+
+export const getManagedProducts = (): Product[] => {
+  const overrides = getProductOverrides();
+  const managedBase = products.map((p) => applyOverride(p, overrides[p.id]));
+  return [...managedBase, ...getCustomProducts()];
+};
+
 export const getProductById = (id: string): Product | undefined => {
-  return products.find((p) => p.id === id);
+  return getManagedProducts().find((p) => p.id === id);
 };
 
 export const getProductsByCategory = (category: string): Product[] => {
-  return products.filter((p) => p.category === category || p.subcategory === category);
+  return getManagedProducts().filter((p) => p.category === category || p.subcategory === category);
 };
 
 export const getFeaturedProducts = (): Product[] => {
-  return products.filter((p) => p.isNew).slice(0, 8);
+  return getManagedProducts().filter((p) => p.isNew).slice(0, 8);
 };
 
 export const getSaleProducts = (): Product[] => {
-  return products.filter((p) => p.isSale);
+  return getManagedProducts().filter((p) => p.isSale);
 };
 
 export const searchProducts = (query: string): Product[] => {
   const searchTerm = query.toLowerCase().trim();
   if (!searchTerm) return [];
 
-  return products.filter((p) =>
+  return getManagedProducts().filter((p) =>
     p.name.toLowerCase().includes(searchTerm) ||
     p.brand.toLowerCase().includes(searchTerm) ||
     p.category.toLowerCase().includes(searchTerm) ||
     p.description.toLowerCase().includes(searchTerm) ||
-    p.colors.some(c => c.name.toLowerCase().includes(searchTerm))
+    p.colors.some((c) => c.name.toLowerCase().includes(searchTerm))
   );
 };

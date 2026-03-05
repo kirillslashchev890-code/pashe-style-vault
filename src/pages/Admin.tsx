@@ -3,10 +3,11 @@ import { useNavigate } from "react-router-dom";
 import Layout from "@/components/layout/Layout";
 import { Button } from "@/components/ui/button";
 import { motion } from "framer-motion";
-import { Package, Users, Shield, ArrowLeft, Star, BarChart3, MapPin, CalendarClock } from "lucide-react";
+import { Package, Users, Shield, ArrowLeft, Star, BarChart3, MapPin, CalendarClock, Tags } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useStockManager } from "@/hooks/useStockManager";
+import { Product, getManagedProducts, getProductOverrides, saveCustomProduct, upsertProductOverride } from "@/data/products";
 
 interface ShippingAddress {
   deliveryType?: "delivery" | "pickup";
@@ -50,17 +51,47 @@ interface AdminReview {
 const ADMIN_EMAIL = "admin1@gmail.com";
 const ADMIN_PASSWORD = "admin1234";
 
+const defaultCustomProduct = {
+  name: "",
+  category: "tshirts",
+  brand: "PASHE Original",
+  description: "",
+  composition: "100% хлопок",
+  care: "Машинная стирка при 30°C",
+  country: "Турция",
+  price: "",
+  originalPrice: "",
+  isNew: true,
+  color1Name: "Чёрный",
+  color1Hex: "#1A1A1A",
+  color1Image: "",
+  color2Name: "Синий",
+  color2Hex: "#4169E1",
+  color2Image: "",
+  color3Name: "Коричневый",
+  color3Hex: "#8B4513",
+  color3Image: "",
+};
+
 const Admin = () => {
   const { user, isLoading: authLoading, signIn } = useAuth();
   const navigate = useNavigate();
   const [isAdmin, setIsAdmin] = useState<boolean | null>(null);
   const [autoLoginAttempted, setAutoLoginAttempted] = useState(false);
-  const [tab, setTab] = useState<"orders" | "users" | "reviews" | "inventory">("orders");
+  const [tab, setTab] = useState<"orders" | "users" | "reviews" | "inventory" | "products">("orders");
   const [orders, setOrders] = useState<AdminOrder[]>([]);
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [reviews, setReviews] = useState<AdminReview[]>([]);
   const [loading, setLoading] = useState(true);
   const { allLowStock } = useStockManager();
+
+  const [allProducts, setAllProducts] = useState<Product[]>([]);
+  const [selectedProductId, setSelectedProductId] = useState("");
+  const [editPrice, setEditPrice] = useState("");
+  const [editOriginalPrice, setEditOriginalPrice] = useState("");
+  const [editIsNew, setEditIsNew] = useState(false);
+  const [discountUntil, setDiscountUntil] = useState("");
+  const [customProduct, setCustomProduct] = useState(defaultCustomProduct);
 
   useEffect(() => {
     if (authLoading) return;
@@ -73,6 +104,34 @@ const Admin = () => {
   useEffect(() => {
     if (user) checkAdmin();
   }, [user]);
+
+  useEffect(() => {
+    if (tab !== "products") return;
+    refreshProducts();
+  }, [tab]);
+
+  useEffect(() => {
+    if (!selectedProductId || allProducts.length === 0) return;
+    const selected = allProducts.find((p) => p.id === selectedProductId);
+    if (!selected) return;
+
+    const overrides = getProductOverrides();
+    const override = overrides[selectedProductId];
+
+    setEditPrice(String(selected.price));
+    setEditOriginalPrice(selected.originalPrice ? String(selected.originalPrice) : "");
+    setEditIsNew(!!selected.isNew);
+    setDiscountUntil(override?.discountUntil || "");
+  }, [selectedProductId, allProducts]);
+
+  const refreshProducts = () => {
+    const list = getManagedProducts();
+    setAllProducts(list);
+
+    if (!selectedProductId && list.length > 0) {
+      setSelectedProductId(list[0].id);
+    }
+  };
 
   const checkAdmin = async () => {
     if (!user) return;
@@ -138,6 +197,91 @@ const Admin = () => {
     fetchReviews();
   };
 
+  const saveCurrentProductSettings = () => {
+    if (!selectedProductId) return;
+
+    const priceNum = Number(editPrice);
+    const originalNum = Number(editOriginalPrice);
+
+    upsertProductOverride(selectedProductId, {
+      price: Number.isFinite(priceNum) && priceNum > 0 ? priceNum : undefined,
+      originalPrice:
+        editOriginalPrice.trim() === ""
+          ? null
+          : Number.isFinite(originalNum) && originalNum > 0
+            ? originalNum
+            : null,
+      isNew: editIsNew,
+      discountUntil: discountUntil || null,
+    });
+
+    refreshProducts();
+  };
+
+  const clearDiscount = () => {
+    if (!selectedProductId) return;
+
+    upsertProductOverride(selectedProductId, {
+      originalPrice: null,
+      discountUntil: null,
+    });
+
+    setEditOriginalPrice("");
+    setDiscountUntil("");
+    refreshProducts();
+  };
+
+  const addCustomProduct = () => {
+    const price = Number(customProduct.price);
+    if (!customProduct.name.trim() || !Number.isFinite(price) || price <= 0) return;
+
+    const original = Number(customProduct.originalPrice);
+
+    const preparedColors = [
+      { name: customProduct.color1Name.trim(), hex: customProduct.color1Hex.trim(), image: customProduct.color1Image.trim() },
+      { name: customProduct.color2Name.trim(), hex: customProduct.color2Hex.trim(), image: customProduct.color2Image.trim() },
+      { name: customProduct.color3Name.trim(), hex: customProduct.color3Hex.trim(), image: customProduct.color3Image.trim() },
+    ].filter((c) => c.name && c.hex && c.image);
+
+    if (preparedColors.length === 0) return;
+
+    const id = `${customProduct.category}-${Date.now()}`;
+
+    const newProduct: Product = {
+      id,
+      name: customProduct.name.trim(),
+      category: customProduct.category,
+      subcategory: customProduct.category,
+      season: "all",
+      brand: customProduct.brand.trim() || "PASHE Original",
+      description: customProduct.description.trim() || "Описание товара",
+      composition: customProduct.composition.trim() || "100% хлопок",
+      care: customProduct.care.trim() || "Машинная стирка при 30°C",
+      country: customProduct.country.trim() || "Турция",
+      price,
+      originalPrice:
+        customProduct.originalPrice.trim() !== "" && Number.isFinite(original) && original > 0
+          ? original
+          : undefined,
+      colors: preparedColors.map((c) => ({ name: c.name, hex: c.hex })),
+      colorImages: Object.fromEntries(preparedColors.map((c) => [c.name, [c.image]])),
+      images: [preparedColors[0].image],
+      sizes: [
+        { name: "S", available: true },
+        { name: "M", available: true },
+        { name: "L", available: true },
+        { name: "XL", available: true },
+      ],
+      isNew: customProduct.isNew,
+      isSale:
+        customProduct.originalPrice.trim() !== "" && Number.isFinite(original) && original > price,
+    };
+
+    saveCustomProduct(newProduct);
+    setCustomProduct(defaultCustomProduct);
+    refreshProducts();
+  };
+
   const statusLabels: Record<string, string> = {
     pending: "Ожидание подтверждения",
     processing: "Подтверждён",
@@ -191,6 +335,7 @@ const Admin = () => {
   };
 
   const lowStockProducts = allLowStock();
+  const selectedProduct = allProducts.find((p) => p.id === selectedProductId);
 
   if (authLoading || isAdmin === null) {
     return (
@@ -243,6 +388,7 @@ const Admin = () => {
             { id: "users", icon: Users, label: "Пользователи" },
             { id: "reviews", icon: Star, label: "Отзывы" },
             { id: "inventory", icon: BarChart3, label: "Остатки" },
+            { id: "products", icon: Tags, label: "Товары" },
           ] as const).map((t) => (
             <button
               key={t.id}
@@ -369,20 +515,138 @@ const Admin = () => {
                   <th className="text-left p-4 font-semibold">Товар</th>
                   <th className="text-left p-4 font-semibold">Категория</th>
                   <th className="text-left p-4 font-semibold">Размер</th>
+                  <th className="text-left p-4 font-semibold">Цвет</th>
                   <th className="text-left p-4 font-semibold">Остаток</th>
                 </tr>
               </thead>
               <tbody>
-                {lowStockProducts.map((p) => (
-                  <tr key={p.id} className="border-b border-border last:border-0 hover:bg-secondary/20">
+                {lowStockProducts.map((p, idx) => (
+                  <tr key={`${p.id}-${p.size}-${p.color}-${idx}`} className="border-b border-border last:border-0 hover:bg-secondary/20">
                     <td className="p-4 font-medium">{p.name}</td>
                     <td className="p-4 text-muted-foreground">{p.category}</td>
                     <td className="p-4">{p.size}</td>
+                    <td className="p-4">{p.color}</td>
                     <td className="p-4"><span className="text-xs font-semibold px-2 py-1 rounded-full bg-secondary">{p.count} шт</span></td>
                   </tr>
                 ))}
               </tbody>
             </table>
+          </div>
+        )}
+
+        {tab === "products" && (
+          <div className="space-y-6">
+            <div className="bg-card border border-border rounded-xl p-5">
+              <h3 className="font-semibold mb-4">Управление скидкой и NEW</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="text-sm text-muted-foreground">Товар</label>
+                  <select
+                    value={selectedProductId}
+                    onChange={(e) => setSelectedProductId(e.target.value)}
+                    className="w-full mt-1.5 h-11 px-3 bg-background border border-border rounded-lg"
+                  >
+                    {allProducts.map((p) => (
+                      <option key={p.id} value={p.id}>{p.name}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-sm text-muted-foreground">Цена</label>
+                    <input
+                      type="number"
+                      value={editPrice}
+                      onChange={(e) => setEditPrice(e.target.value.replace(/\D/g, "").slice(0, 7))}
+                      className="w-full mt-1.5 h-11 px-3 bg-background border border-border rounded-lg"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-sm text-muted-foreground">Старая цена (скидка)</label>
+                    <input
+                      type="number"
+                      value={editOriginalPrice}
+                      onChange={(e) => setEditOriginalPrice(e.target.value.replace(/\D/g, "").slice(0, 7))}
+                      className="w-full mt-1.5 h-11 px-3 bg-background border border-border rounded-lg"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="text-sm text-muted-foreground">Скидка активна до</label>
+                  <input
+                    type="date"
+                    value={discountUntil}
+                    onChange={(e) => setDiscountUntil(e.target.value)}
+                    className="w-full mt-1.5 h-11 px-3 bg-background border border-border rounded-lg"
+                  />
+                </div>
+
+                <div className="flex items-center gap-3 mt-7">
+                  <input id="is-new-toggle" type="checkbox" checked={editIsNew} onChange={(e) => setEditIsNew(e.target.checked)} />
+                  <label htmlFor="is-new-toggle" className="text-sm">Показывать бейдж NEW</label>
+                </div>
+              </div>
+
+              {selectedProduct && (
+                <p className="text-xs text-muted-foreground mt-3">Текущая цена: {formatPrice(selectedProduct.price)} {selectedProduct.originalPrice ? ` • Было: ${formatPrice(selectedProduct.originalPrice)}` : ""}</p>
+              )}
+
+              <div className="flex flex-wrap gap-3 mt-4">
+                <Button className="btn-gold" onClick={saveCurrentProductSettings}>Сохранить изменения</Button>
+                <Button variant="outline" onClick={clearDiscount}>Снять скидку</Button>
+                <Button variant="outline" onClick={refreshProducts}>Обновить список</Button>
+              </div>
+            </div>
+
+            <div className="bg-card border border-border rounded-xl p-5">
+              <h3 className="font-semibold mb-4">Добавить новый товар</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <input value={customProduct.name} onChange={(e) => setCustomProduct((p) => ({ ...p, name: e.target.value.slice(0, 120) }))} placeholder="Название" className="h-11 px-3 bg-background border border-border rounded-lg" />
+                <select value={customProduct.category} onChange={(e) => setCustomProduct((p) => ({ ...p, category: e.target.value }))} className="h-11 px-3 bg-background border border-border rounded-lg">
+                  {["tshirts", "outerwear", "shirts", "pants", "jeans", "shorts", "sweatshirts", "polo", "shoes", "suits", "accessories", "caps"].map((c) => <option key={c} value={c}>{c}</option>)}
+                </select>
+                <input value={customProduct.brand} onChange={(e) => setCustomProduct((p) => ({ ...p, brand: e.target.value.slice(0, 60) }))} placeholder="Бренд" className="h-11 px-3 bg-background border border-border rounded-lg" />
+                <input type="number" value={customProduct.price} onChange={(e) => setCustomProduct((p) => ({ ...p, price: e.target.value.replace(/\D/g, "").slice(0, 7) }))} placeholder="Цена" className="h-11 px-3 bg-background border border-border rounded-lg" />
+                <input type="number" value={customProduct.originalPrice} onChange={(e) => setCustomProduct((p) => ({ ...p, originalPrice: e.target.value.replace(/\D/g, "").slice(0, 7) }))} placeholder="Старая цена (опционально)" className="h-11 px-3 bg-background border border-border rounded-lg" />
+                <div className="flex items-center gap-2">
+                  <input id="custom-is-new" type="checkbox" checked={customProduct.isNew} onChange={(e) => setCustomProduct((p) => ({ ...p, isNew: e.target.checked }))} />
+                  <label htmlFor="custom-is-new" className="text-sm">NEW</label>
+                </div>
+                <textarea value={customProduct.description} onChange={(e) => setCustomProduct((p) => ({ ...p, description: e.target.value.slice(0, 500) }))} placeholder="Описание" className="md:col-span-2 min-h-24 p-3 bg-background border border-border rounded-lg" />
+                <input value={customProduct.composition} onChange={(e) => setCustomProduct((p) => ({ ...p, composition: e.target.value.slice(0, 120) }))} placeholder="Состав" className="h-11 px-3 bg-background border border-border rounded-lg" />
+                <input value={customProduct.care} onChange={(e) => setCustomProduct((p) => ({ ...p, care: e.target.value.slice(0, 120) }))} placeholder="Уход" className="h-11 px-3 bg-background border border-border rounded-lg" />
+                <input value={customProduct.country} onChange={(e) => setCustomProduct((p) => ({ ...p, country: e.target.value.slice(0, 60) }))} placeholder="Страна" className="h-11 px-3 bg-background border border-border rounded-lg" />
+              </div>
+
+              <div className="mt-5 space-y-3">
+                {[1, 2, 3].map((n) => (
+                  <div key={n} className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                    <input
+                      value={customProduct[`color${n}Name` as const]}
+                      onChange={(e) => setCustomProduct((p) => ({ ...p, [`color${n}Name`]: e.target.value.slice(0, 30) }))}
+                      placeholder={`Цвет ${n}: название`}
+                      className="h-11 px-3 bg-background border border-border rounded-lg"
+                    />
+                    <input
+                      value={customProduct[`color${n}Hex` as const]}
+                      onChange={(e) => setCustomProduct((p) => ({ ...p, [`color${n}Hex`]: e.target.value.slice(0, 7) }))}
+                      placeholder={`Цвет ${n}: HEX (#000000)`}
+                      className="h-11 px-3 bg-background border border-border rounded-lg"
+                    />
+                    <input
+                      value={customProduct[`color${n}Image` as const]}
+                      onChange={(e) => setCustomProduct((p) => ({ ...p, [`color${n}Image`]: e.target.value.slice(0, 250) }))}
+                      placeholder={`Цвет ${n}: путь к фото`}
+                      className="h-11 px-3 bg-background border border-border rounded-lg"
+                    />
+                  </div>
+                ))}
+              </div>
+
+              <Button className="btn-gold mt-5" onClick={addCustomProduct}>Добавить товар</Button>
+            </div>
           </div>
         )}
       </div>

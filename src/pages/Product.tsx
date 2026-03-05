@@ -4,7 +4,7 @@ import Layout from "@/components/layout/Layout";
 import { Button } from "@/components/ui/button";
 import { motion, AnimatePresence } from "framer-motion";
 import { Heart, ShoppingBag, Minus, Plus, ChevronLeft, Truck, RefreshCw, Shield, ChevronDown, Ruler, AlertTriangle } from "lucide-react";
-import { getProductById, products } from "@/data/products";
+import { getProductById, getManagedProducts } from "@/data/products";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import ImageLightbox from "@/components/product/ImageLightbox";
 import AuthModal from "@/components/auth/AuthModal";
@@ -31,21 +31,33 @@ const Product = () => {
   const { user } = useAuth();
   const { addToCart } = useCart();
   const { isInWishlist, toggleWishlist } = useWishlist();
-  const { getStock } = useStockManager();
+  const { getLowStock, getVariantStock } = useStockManager();
 
-  const product = getProductById(id || "") || products[0];
-  const stockEntry = getStock(product.id);
+  const fallbackProduct = getManagedProducts()[0];
+  const product = getProductById(id || "") || fallbackProduct;
+  const lowStockEntry = getLowStock(product.id);
   const sizeGuideData = sizeGuideByCategory[product.category] || [];
 
   useEffect(() => {
     if (product.colors.length > 0 && !selectedColor) {
       setSelectedColor(product.colors[0].name);
     }
-  }, [product.id]);
+  }, [product.id, product.colors, selectedColor]);
 
   const currentImages = selectedColor && product.colorImages?.[selectedColor]
     ? product.colorImages[selectedColor]
     : product.images;
+
+  useEffect(() => {
+    if (selectedImage >= currentImages.length) {
+      setSelectedImage(0);
+    }
+  }, [currentImages, selectedImage]);
+
+  const selectedVariantStock =
+    selectedSize && selectedColor
+      ? getVariantStock(product.id, selectedSize, selectedColor)
+      : null;
 
   const formatPrice = (price: number) =>
     new Intl.NumberFormat("ru-RU", { style: "currency", currency: "RUB", minimumFractionDigits: 0 }).format(price);
@@ -60,32 +72,33 @@ const Product = () => {
         </Link>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-16">
-          {/* Images */}
           <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.5 }}>
             <div className="relative aspect-[3/4] rounded-2xl overflow-hidden bg-secondary mb-4 cursor-zoom-in" onClick={() => setLightboxOpen(true)}>
               <img src={currentImages[selectedImage] || currentImages[0]} alt={product.name} className="absolute inset-0 w-full h-full object-cover hover:scale-105 transition-transform duration-300" />
               {discount && <span className="absolute top-4 left-4 bg-destructive text-destructive-foreground text-sm font-semibold px-3 py-1 rounded-full">-{discount}%</span>}
               {product.isNew && <span className="absolute top-4 right-4 bg-primary text-primary-foreground text-sm font-semibold px-3 py-1 rounded-full">NEW</span>}
-              {stockEntry && stockEntry.count <= 10 && (
-                <span className="absolute top-14 left-4 bg-yellow-500 text-yellow-950 text-sm font-semibold px-3 py-1 rounded-full">
-                  Осталось {stockEntry.count} шт ({stockEntry.size})
+              {lowStockEntry && (
+                <span className="absolute top-14 left-4 bg-accent text-accent-foreground text-sm font-semibold px-3 py-1 rounded-full">
+                  Осталось {lowStockEntry.count} шт ({lowStockEntry.size}, {lowStockEntry.color})
                 </span>
               )}
               <div className="absolute inset-0 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity bg-background/20">
                 <span className="bg-background/80 px-3 py-1.5 rounded-full text-sm">Нажмите для увеличения</span>
               </div>
             </div>
-            <div className="flex gap-4">
-              {currentImages.map((image, index) => (
-                <button key={`${selectedColor}-${index}`} onClick={() => setSelectedImage(index)}
-                  className={`relative aspect-square w-20 rounded-lg overflow-hidden border-2 transition-colors ${selectedImage === index ? "border-primary" : "border-transparent hover:border-border"}`}>
-                  <img src={image} alt={`${product.name} - ${index + 1}`} className="absolute inset-0 w-full h-full object-cover" />
-                </button>
-              ))}
-            </div>
+
+            {currentImages.length > 1 && (
+              <div className="flex gap-4">
+                {currentImages.map((image, index) => (
+                  <button key={`${selectedColor}-${index}`} onClick={() => setSelectedImage(index)}
+                    className={`relative aspect-square w-20 rounded-lg overflow-hidden border-2 transition-colors ${selectedImage === index ? "border-primary" : "border-transparent hover:border-border"}`}>
+                    <img src={image} alt={`${product.name} - ${index + 1}`} className="absolute inset-0 w-full h-full object-cover" />
+                  </button>
+                ))}
+              </div>
+            )}
           </motion.div>
 
-          {/* Info */}
           <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.5, delay: 0.1 }}>
             <div className="flex items-center gap-2 mb-2">
               <p className="text-primary text-sm font-medium">{product.brand}</p>
@@ -99,7 +112,6 @@ const Product = () => {
             </div>
             <p className="text-muted-foreground mb-8">{product.description}</p>
 
-            {/* Colors */}
             <div className="mb-6">
               <span className="font-medium block mb-3">Цвет: {selectedColor || "Выберите цвет"}</span>
               <div className="flex gap-2 flex-wrap">
@@ -113,7 +125,6 @@ const Product = () => {
               </div>
             </div>
 
-            {/* Sizes */}
             <div className="mb-6">
               <div className="flex items-center justify-between mb-3">
                 <span className="font-medium">Размер</span>
@@ -133,34 +144,52 @@ const Product = () => {
                     }`}>{size.name}</button>
                 ))}
               </div>
+              {selectedVariantStock !== null && (
+                <p className="text-sm text-muted-foreground mt-3">В наличии для выбранного варианта: {selectedVariantStock} шт</p>
+              )}
             </div>
 
-            {/* Quantity */}
             <div className="mb-8">
               <span className="font-medium block mb-3">Количество</span>
               <div className="flex items-center gap-4">
                 <button onClick={() => setQuantity(Math.max(1, quantity - 1))} className="w-12 h-12 rounded-lg border border-border flex items-center justify-center hover:bg-secondary transition-colors"><Minus size={18} /></button>
                 <span className="text-xl font-medium w-8 text-center">{quantity}</span>
-                <button onClick={() => setQuantity(quantity + 1)} className="w-12 h-12 rounded-lg border border-border flex items-center justify-center hover:bg-secondary transition-colors"><Plus size={18} /></button>
+                <button
+                  onClick={() => {
+                    if (selectedVariantStock !== null) {
+                      setQuantity(Math.min(selectedVariantStock, quantity + 1));
+                      return;
+                    }
+                    setQuantity(quantity + 1);
+                  }}
+                  className="w-12 h-12 rounded-lg border border-border flex items-center justify-center hover:bg-secondary transition-colors"
+                ><Plus size={18} /></button>
               </div>
             </div>
 
-            {/* Actions */}
             <div className="flex gap-4 mb-8">
-              <Button size="lg" className="flex-1 btn-gold py-6" disabled={!selectedSize}
+              <Button size="lg" className="flex-1 btn-gold py-6" disabled={!selectedSize || !selectedColor || selectedVariantStock === 0}
                 onClick={() => {
                   if (!user) { setAuthModalOpen(true); return; }
-                  if (selectedSize) {
+                  if (selectedSize && selectedColor) {
                     addToCart({
-                      productId: product.id, size: selectedSize, quantity,
-                      productName: product.name, productPrice: product.price,
+                      productId: product.id,
+                      size: selectedSize,
+                      quantity,
+                      productName: product.name,
+                      productPrice: product.price,
                       productImage: currentImages[0],
-                      colorId: selectedColor || undefined, colorName: selectedColor || undefined,
+                      colorId: selectedColor,
+                      colorName: selectedColor,
                     });
                   }
                 }}>
                 <ShoppingBag size={20} className="mr-2" />
-                {selectedSize ? "Добавить в корзину" : "Выберите размер"}
+                {!selectedSize || !selectedColor
+                  ? "Выберите размер и цвет"
+                  : selectedVariantStock === 0
+                    ? "Нет в наличии"
+                    : "Добавить в корзину"}
               </Button>
               <Button size="lg" variant="outline"
                 className={`w-14 h-14 p-0 ${isInWishlist(product.id) ? "text-destructive border-destructive" : ""}`}
@@ -169,7 +198,6 @@ const Product = () => {
               </Button>
             </div>
 
-            {/* Size Guide - LOCAL DATA */}
             {sizeGuideOpen && sizeGuideData.length > 0 && (
               <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} className="mb-8 border border-border rounded-xl overflow-hidden">
                 <div className="p-4 bg-secondary/50"><h3 className="font-semibold flex items-center gap-2"><Ruler size={18} /> Таблица размеров (см)</h3></div>
@@ -202,14 +230,12 @@ const Product = () => {
               </motion.div>
             )}
 
-            {/* Features */}
             <div className="space-y-4 border-t border-border pt-8">
               <div className="flex items-center gap-4"><Truck size={20} className="text-primary" /><div><p className="font-medium">Доставка по России</p><p className="text-muted-foreground text-sm">От 500 до 2 000 ₽ в зависимости от региона</p></div></div>
               <div className="flex items-center gap-4"><RefreshCw size={20} className="text-primary" /><div><p className="font-medium">Возврат 30 дней</p><p className="text-muted-foreground text-sm">Простой обмен и возврат</p></div></div>
               <div className="flex items-center gap-4"><Shield size={20} className="text-primary" /><div><p className="font-medium">Гарантия качества</p><p className="text-muted-foreground text-sm">Только оригинальные товары</p></div></div>
             </div>
 
-            {/* Collapsible Details */}
             <div className="border-t border-border mt-8 pt-8 space-y-4">
               <Collapsible open={compositionOpen} onOpenChange={setCompositionOpen}>
                 <CollapsibleTrigger className="w-full flex items-center justify-between py-3 hover:text-primary transition-colors">

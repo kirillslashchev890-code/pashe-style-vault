@@ -10,10 +10,11 @@ interface ProductCardProps {
   product: Product;
   showLowStock?: boolean;
   lowStockSize?: string;
+  lowStockColor?: string;
   lowStockCount?: number;
 }
 
-const ProductCard = ({ product, showLowStock, lowStockSize, lowStockCount }: ProductCardProps) => {
+const ProductCard = ({ product, showLowStock, lowStockSize, lowStockColor, lowStockCount }: ProductCardProps) => {
   const [authModalOpen, setAuthModalOpen] = useState(false);
   const { user } = useAuth();
   const { isInWishlist, toggleWishlist } = useWishlist();
@@ -52,8 +53,8 @@ const ProductCard = ({ product, showLowStock, lowStockSize, lowStockCount }: Pro
             </span>
           )}
           {showLowStock && lowStockCount != null && lowStockCount <= 10 && (
-            <span className="bg-yellow-500 text-yellow-950 text-xs font-semibold px-2.5 py-1 rounded-full">
-              Осталось {lowStockCount} шт ({lowStockSize})
+            <span className="bg-accent text-accent-foreground text-xs font-semibold px-2.5 py-1 rounded-full">
+              Осталось {lowStockCount} шт ({lowStockSize}, {lowStockColor})
             </span>
           )}
         </div>

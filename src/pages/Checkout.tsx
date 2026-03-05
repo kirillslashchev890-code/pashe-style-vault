@@ -13,6 +13,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useStockManager } from "@/hooks/useStockManager";
 import { toast } from "sonner";
 import { deliveryRegions, getDeliveryCost, getCitiesByRegion } from "@/data/deliveryRegions";
+import { getProductById } from "@/data/products";
 
 const phoneSchema = z.string().regex(/^8\d{10}$/, { message: "Введите номер в формате 8XXXXXXXXXX" });
 
@@ -160,7 +161,8 @@ const Checkout = () => {
     }
 
     items.forEach((item) => {
-      decrementStock(item.product_id, item.quantity);
+      const fallbackColor = item.color_name || getProductById(item.product_id)?.colors[0]?.name || "Базовый";
+      decrementStock(item.product_id, item.size, fallbackColor, item.quantity);
     });
 
     await clearCart();

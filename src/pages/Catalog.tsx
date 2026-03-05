@@ -1,11 +1,11 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import Layout from "@/components/layout/Layout";
 import ProductCard from "@/components/product/ProductCard";
 import { Button } from "@/components/ui/button";
 import { motion } from "framer-motion";
-import { SlidersHorizontal, ChevronDown, X } from "lucide-react";
-import { products, Product } from "@/data/products";
+import { SlidersHorizontal, X } from "lucide-react";
+import { getManagedProducts } from "@/data/products";
 import { useStockManager } from "@/hooks/useStockManager";
 
 const categories = [
@@ -40,38 +40,82 @@ const Catalog = () => {
   const [priceFrom, setPriceFrom] = useState("");
   const [priceTo, setPriceTo] = useState("");
   const [selectedSizes, setSelectedSizes] = useState<string[]>([]);
-  const [selectedSeason, setSelectedSeason] = useState("all");
-  const { getStock } = useStockManager();
-  
-  const selectedCategory = searchParams.get("category") || "all";
+  const [sortBy, setSortBy] = useState<"popular" | "price-asc" | "price-desc" | "new">("popular");
+  const { getLowStock } = useStockManager();
 
-  const filteredProducts = products.filter((product) => {
-    if (selectedCategory !== "all") {
-      if (selectedCategory === "new") { if (!product.isNew) return false; }
-      else if (selectedCategory === "sale") { if (!product.isSale) return false; }
-      else if (product.category !== selectedCategory && product.subcategory !== selectedCategory) return false;
-    }
-    if (priceFrom && product.price < parseInt(priceFrom)) return false;
-    if (priceTo && product.price > parseInt(priceTo)) return false;
-    if (selectedSizes.length > 0) {
-      const hasSize = product.sizes.some(s => selectedSizes.includes(s.name) && s.available);
-      if (!hasSize) return false;
-    }
-    if (selectedSeason !== "all" && product.season !== selectedSeason && product.season !== "all") return false;
-    return true;
-  });
+  const selectedCategory = searchParams.get("category") || "all";
+  const selectedSeason = searchParams.get("season") || "all";
+  const selectedBrand = searchParams.get("brand") || "";
+
+  const filteredProducts = useMemo(() => {
+    const allProducts = getManagedProducts();
+
+    const filtered = allProducts.filter((product) => {
+      if (selectedCategory !== "all") {
+        if (selectedCategory === "new") {
+          if (!product.isNew) return false;
+        } else if (selectedCategory === "sale") {
+          if (!product.isSale) return false;
+        } else if (product.category !== selectedCategory && product.subcategory !== selectedCategory) {
+          return false;
+        }
+      }
+
+      if (selectedBrand && product.brand !== selectedBrand) return false;
+
+      if (priceFrom && product.price < Number(priceFrom)) return false;
+      if (priceTo && product.price > Number(priceTo)) return false;
+
+      if (selectedSizes.length > 0) {
+        const hasSize = product.sizes.some((s) => selectedSizes.includes(s.name) && s.available);
+        if (!hasSize) return false;
+      }
+
+      if (selectedSeason !== "all" && product.season !== selectedSeason && product.season !== "all") {
+        return false;
+      }
+
+      return true;
+    });
+
+    if (sortBy === "price-asc") return [...filtered].sort((a, b) => a.price - b.price);
+    if (sortBy === "price-desc") return [...filtered].sort((a, b) => b.price - a.price);
+    if (sortBy === "new") return [...filtered].sort((a, b) => Number(!!b.isNew) - Number(!!a.isNew));
+
+    return filtered;
+  }, [selectedCategory, selectedBrand, priceFrom, priceTo, selectedSizes, selectedSeason, sortBy]);
 
   const handleCategoryChange = (categoryId: string) => {
-    if (categoryId === "all") searchParams.delete("category");
-    else searchParams.set("category", categoryId);
-    setSearchParams(searchParams);
+    const next = new URLSearchParams(searchParams);
+    if (categoryId === "all") next.delete("category");
+    else next.set("category", categoryId);
+    setSearchParams(next);
+  };
+
+  const handleSeasonChange = (seasonId: string) => {
+    const next = new URLSearchParams(searchParams);
+    if (seasonId === "all") next.delete("season");
+    else next.set("season", seasonId);
+    setSearchParams(next);
   };
 
   const toggleSize = (size: string) => {
-    setSelectedSizes(prev => prev.includes(size) ? prev.filter(s => s !== size) : [...prev, size]);
+    setSelectedSizes((prev) =>
+      prev.includes(size) ? prev.filter((s) => s !== size) : [...prev, size]
+    );
   };
 
-  const clearFilters = () => { setPriceFrom(""); setPriceTo(""); setSelectedSizes([]); setSelectedSeason("all"); };
+  const clearFilters = () => {
+    setPriceFrom("");
+    setPriceTo("");
+    setSelectedSizes([]);
+    setSortBy("popular");
+
+    const next = new URLSearchParams(searchParams);
+    next.delete("season");
+    next.delete("brand");
+    setSearchParams(next);
+  };
 
   return (
     <Layout>
@@ -79,15 +123,27 @@ const Catalog = () => {
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="mb-8">
           <h1 className="text-3xl md:text-5xl font-bold mb-4">Каталог</h1>
           <p className="text-muted-foreground">{filteredProducts.length} товаров</p>
+          {(selectedBrand || selectedSeason !== "all") && (
+            <p className="text-sm text-muted-foreground mt-2">
+              {selectedBrand ? `Бренд: ${selectedBrand}` : ""}
+              {selectedBrand && selectedSeason !== "all" ? " • " : ""}
+              {selectedSeason !== "all" ? `Сезон: ${seasons.find((s) => s.id === selectedSeason)?.name}` : ""}
+            </p>
+          )}
         </motion.div>
 
         <div className="flex flex-wrap items-center gap-4 mb-8">
           <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide w-full md:w-auto">
             {categories.map((category) => (
-              <button key={category.id} onClick={() => handleCategoryChange(category.id)}
+              <button
+                key={category.id}
+                onClick={() => handleCategoryChange(category.id)}
                 className={`px-4 py-2 rounded-full text-sm font-medium transition-all whitespace-nowrap ${
-                  selectedCategory === category.id ? "bg-primary text-primary-foreground" : "bg-secondary text-foreground hover:bg-muted"
-                }`}>
+                  selectedCategory === category.id
+                    ? "bg-primary text-primary-foreground"
+                    : "bg-secondary text-foreground hover:bg-muted"
+                }`}
+              >
                 {category.name}
               </button>
             ))}
@@ -98,8 +154,7 @@ const Catalog = () => {
         </div>
 
         {isFilterOpen && (
-          <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }}
-            className="bg-card border border-border rounded-2xl p-6 mb-8">
+          <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} className="bg-card border border-border rounded-2xl p-6 mb-8">
             <div className="flex items-center justify-between mb-4">
               <h3 className="font-semibold">Фильтры</h3>
               <div className="flex items-center gap-4">
@@ -111,18 +166,37 @@ const Catalog = () => {
               <div>
                 <label className="block text-sm font-medium mb-2">Цена</label>
                 <div className="flex gap-2">
-                  <input type="number" placeholder="От" value={priceFrom} onChange={(e) => setPriceFrom(e.target.value)} className="w-full px-3 py-2 bg-secondary border border-border rounded-lg text-sm" />
-                  <input type="number" placeholder="До" value={priceTo} onChange={(e) => setPriceTo(e.target.value)} className="w-full px-3 py-2 bg-secondary border border-border rounded-lg text-sm" />
+                  <input
+                    type="number"
+                    placeholder="От"
+                    value={priceFrom}
+                    onChange={(e) => setPriceFrom(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                    className="w-full px-3 py-2 bg-secondary border border-border rounded-lg text-sm"
+                  />
+                  <input
+                    type="number"
+                    placeholder="До"
+                    value={priceTo}
+                    onChange={(e) => setPriceTo(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                    className="w-full px-3 py-2 bg-secondary border border-border rounded-lg text-sm"
+                  />
                 </div>
               </div>
               <div>
                 <label className="block text-sm font-medium mb-2">Размер</label>
                 <div className="flex flex-wrap gap-2">
                   {["XS", "S", "M", "L", "XL", "XXL"].map((size) => (
-                    <button key={size} onClick={() => toggleSize(size)}
+                    <button
+                      key={size}
+                      onClick={() => toggleSize(size)}
                       className={`px-3 py-1 border rounded-lg text-sm transition-colors ${
-                        selectedSizes.includes(size) ? "bg-primary border-primary text-primary-foreground" : "bg-secondary border-border hover:border-primary"
-                      }`}>{size}</button>
+                        selectedSizes.includes(size)
+                          ? "bg-primary border-primary text-primary-foreground"
+                          : "bg-secondary border-border hover:border-primary"
+                      }`}
+                    >
+                      {size}
+                    </button>
                   ))}
                 </div>
               </div>
@@ -130,18 +204,32 @@ const Catalog = () => {
                 <label className="block text-sm font-medium mb-2">Сезон</label>
                 <div className="flex flex-wrap gap-2">
                   {seasons.map((season) => (
-                    <button key={season.id} onClick={() => setSelectedSeason(season.id)}
+                    <button
+                      key={season.id}
+                      onClick={() => handleSeasonChange(season.id)}
                       className={`px-3 py-1 border rounded-lg text-sm transition-colors ${
-                        selectedSeason === season.id ? "bg-primary border-primary text-primary-foreground" : "bg-secondary border-border hover:border-primary"
-                      }`}>{season.name}</button>
+                        selectedSeason === season.id
+                          ? "bg-primary border-primary text-primary-foreground"
+                          : "bg-secondary border-border hover:border-primary"
+                      }`}
+                    >
+                      {season.name}
+                    </button>
                   ))}
                 </div>
               </div>
               <div>
                 <label className="block text-sm font-medium mb-2">Сортировка</label>
-                <button className="w-full px-3 py-2 bg-secondary border border-border rounded-lg text-sm flex items-center justify-between">
-                  По популярности <ChevronDown size={16} />
-                </button>
+                <select
+                  value={sortBy}
+                  onChange={(e) => setSortBy(e.target.value as "popular" | "price-asc" | "price-desc" | "new")}
+                  className="w-full px-3 py-2 bg-secondary border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                >
+                  <option value="popular">По популярности</option>
+                  <option value="new">Сначала новинки</option>
+                  <option value="price-asc">Цена: по возрастанию</option>
+                  <option value="price-desc">Цена: по убыванию</option>
+                </select>
               </div>
             </div>
           </motion.div>
@@ -149,14 +237,15 @@ const Catalog = () => {
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 md:gap-8">
           {filteredProducts.map((product, index) => {
-            const stockEntry = getStock(product.id);
+            const lowStock = getLowStock(product.id);
             return (
               <motion.div key={product.id} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: index * 0.02 }}>
                 <ProductCard
                   product={product}
-                  showLowStock={!!stockEntry && stockEntry.count <= 10}
-                  lowStockSize={stockEntry?.size}
-                  lowStockCount={stockEntry?.count}
+                  showLowStock={!!lowStock}
+                  lowStockSize={lowStock?.size}
+                  lowStockColor={lowStock?.color}
+                  lowStockCount={lowStock?.count}
                 />
               </motion.div>
             );

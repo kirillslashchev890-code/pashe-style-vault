@@ -74,13 +74,20 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
   const addToCart = async (params: AddToCartParams) => {
     if (!user) return;
 
-    const { data: existing } = await supabase
+    let existingQuery = supabase
       .from("cart_items")
       .select("id, quantity")
       .eq("user_id", user.id)
       .eq("product_id", params.productId)
-      .eq("size", params.size)
-      .maybeSingle();
+      .eq("size", params.size);
+
+    if (params.colorName) {
+      existingQuery = existingQuery.eq("color_name", params.colorName);
+    } else {
+      existingQuery = existingQuery.is("color_name", null);
+    }
+
+    const { data: existing } = await existingQuery.maybeSingle();
 
     if (existing) {
       await supabase.from("cart_items")
