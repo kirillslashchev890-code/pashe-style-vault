@@ -161,7 +161,8 @@ const Checkout = () => {
     }
 
     items.forEach((item) => {
-      decrementStock(item.product_id, item.quantity);
+      const fallbackColor = item.color_name || getProductById(item.product_id)?.colors[0]?.name || "Базовый";
+      decrementStock(item.product_id, item.size, fallbackColor, item.quantity);
     });
 
     await clearCart();

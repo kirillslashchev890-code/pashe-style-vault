@@ -53,8 +53,8 @@ const ProductCard = ({ product, showLowStock, lowStockSize, lowStockColor, lowSt
             </span>
           )}
           {showLowStock && lowStockCount != null && lowStockCount <= 10 && (
-            <span className="bg-yellow-500 text-yellow-950 text-xs font-semibold px-2.5 py-1 rounded-full">
-              Осталось {lowStockCount} шт ({lowStockSize})
+            <span className="bg-accent text-accent-foreground text-xs font-semibold px-2.5 py-1 rounded-full">
+              Осталось {lowStockCount} шт ({lowStockSize}, {lowStockColor})
             </span>
           )}
         </div>
