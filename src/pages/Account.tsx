@@ -21,7 +21,7 @@ const passwordSchema = z.string().min(6, { message: "Пароль должен �
 const nameSchema = z.string().trim().min(2, { message: "Имя должно содержать минимум 2 символа" }).max(60, { message: "Имя слишком длинное" });
 
 const Account = () => {
-  const { user, isLoading: authLoading, signIn, signUp, signOut } = useAuth();
+  const { user, isLoading: authLoading, signIn, signUp, signOut, resetPassword } = useAuth();
   const { items: wishlistItems, removeFromWishlist } = useWishlist();
   const { orders, statusLabels } = useOrders();
   const [activeTab, setActiveTab] = useState<TabType>("profile");
