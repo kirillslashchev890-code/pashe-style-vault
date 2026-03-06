@@ -135,14 +135,19 @@ const Product = () => {
                 )}
               </div>
               <div className="flex flex-wrap gap-3">
-                {product.sizes.map((size) => (
-                  <button key={size.name} onClick={() => size.available && setSelectedSize(size.name)} disabled={!size.available}
-                    className={`w-14 h-14 rounded-lg border-2 font-medium transition-all ${
-                      selectedSize === size.name ? "border-primary bg-primary text-primary-foreground"
-                      : size.available ? "border-border hover:border-primary text-foreground"
-                      : "border-border bg-muted text-muted-foreground cursor-not-allowed line-through"
-                    }`}>{size.name}</button>
-                ))}
+                {product.sizes.map((size) => {
+                  const variantStock = selectedColor ? getVariantStock(product.id, size.name, selectedColor) : null;
+                  const isSoldOut = variantStock !== null && variantStock === 0;
+                  const isAvailable = size.available && !isSoldOut;
+                  return (
+                    <button key={size.name} onClick={() => isAvailable && setSelectedSize(size.name)} disabled={!isAvailable}
+                      className={`w-14 h-14 rounded-lg border-2 font-medium transition-all ${
+                        selectedSize === size.name && isAvailable ? "border-primary bg-primary text-primary-foreground"
+                        : isAvailable ? "border-border hover:border-primary text-foreground"
+                        : "border-border bg-muted text-muted-foreground cursor-not-allowed line-through"
+                      }`}>{size.name}</button>
+                  );
+                })}
               </div>
               {selectedVariantStock !== null && (
                 <p className="text-sm text-muted-foreground mt-3">В наличии для выбранного варианта: {selectedVariantStock} шт</p>

@@ -105,9 +105,14 @@ const Footer = () => {
         </div>
 
         <div className="border-t border-border mt-12 pt-8 flex flex-col md:flex-row items-center justify-between gap-4">
-          <p className="text-muted-foreground text-sm">
-            © 2025 PASHE. Все права защищены.
-          </p>
+          <div className="text-center md:text-left">
+            <p className="text-muted-foreground text-sm">
+              © 2025 PASHE. Все права защищены.
+            </p>
+            <p className="text-muted-foreground text-xs mt-1">
+              Разработчик: Слащев К.А.
+            </p>
+          </div>
           <div className="flex gap-6 text-sm text-muted-foreground">
             <Link to="/privacy" className="hover:text-primary transition-colors">
               Политика конфиденциальности
