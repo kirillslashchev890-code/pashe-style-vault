@@ -17,6 +17,8 @@ export interface ShippingAddressData {
   city?: string;
   street?: string;
   apartment?: string;
+  entrance?: string;
+  floor?: string;
   zip?: string;
   delivery_days?: string;
   eta_date?: string;

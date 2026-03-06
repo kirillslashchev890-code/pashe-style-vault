@@ -636,25 +636,36 @@ const Admin = () => {
 
               <div className="mt-5 space-y-3">
                 {[1, 2, 3].map((n) => (
-                  <div key={n} className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                  <div key={n} className="grid grid-cols-1 md:grid-cols-3 gap-3 items-end">
                     <input
-                      value={customProduct[`color${n}Name` as const]}
+                      value={(customProduct as any)[`color${n}Name`]}
                       onChange={(e) => setCustomProduct((p) => ({ ...p, [`color${n}Name`]: e.target.value.slice(0, 30) }))}
                       placeholder={`Цвет ${n}: название`}
                       className="h-11 px-3 bg-background border border-border rounded-lg"
                     />
                     <input
-                      value={customProduct[`color${n}Hex` as const]}
+                      value={(customProduct as any)[`color${n}Hex`]}
                       onChange={(e) => setCustomProduct((p) => ({ ...p, [`color${n}Hex`]: e.target.value.slice(0, 7) }))}
                       placeholder={`Цвет ${n}: HEX (#000000)`}
                       className="h-11 px-3 bg-background border border-border rounded-lg"
                     />
-                    <input
-                      value={customProduct[`color${n}Image` as const]}
-                      onChange={(e) => setCustomProduct((p) => ({ ...p, [`color${n}Image`]: e.target.value.slice(0, 250) }))}
-                      placeholder={`Цвет ${n}: путь к фото`}
-                      className="h-11 px-3 bg-background border border-border rounded-lg"
-                    />
+                    <div className="flex items-center gap-2">
+                      <label className="h-11 px-3 bg-background border border-border rounded-lg flex items-center gap-2 cursor-pointer hover:border-primary/50 transition-colors flex-1 min-w-0">
+                        <span className="text-sm text-muted-foreground truncate">
+                          {(customProduct as any)[`color${n}Image`] ? '📷 Фото загружено' : '📷 Выбрать фото'}
+                        </span>
+                        <input type="file" accept="image/*" className="hidden" onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (!file) return;
+                          const reader = new FileReader();
+                          reader.onload = () => setCustomProduct((p) => ({ ...p, [`color${n}Image`]: reader.result as string }));
+                          reader.readAsDataURL(file);
+                        }} />
+                      </label>
+                      {(customProduct as any)[`color${n}Image`] && (
+                        <img src={(customProduct as any)[`color${n}Image`]} alt="" className="w-11 h-11 rounded-lg object-cover border border-border shrink-0" />
+                      )}
+                    </div>
                   </div>
                 ))}
               </div>
