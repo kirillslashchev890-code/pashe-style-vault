@@ -568,18 +568,20 @@ const Admin = () => {
                   <div>
                     <label className="text-sm text-muted-foreground">Цена</label>
                     <input
-                      type="number"
+                      type="text"
+                      inputMode="numeric"
                       value={editPrice}
-                      onChange={(e) => setEditPrice(e.target.value.replace(/\D/g, "").slice(0, 7))}
+                      onChange={(e) => setEditPrice(e.target.value.replace(/[^\d]/g, "").slice(0, 7))}
                       className="w-full mt-1.5 h-11 px-3 bg-background border border-border rounded-lg"
                     />
                   </div>
                   <div>
                     <label className="text-sm text-muted-foreground">Старая цена (скидка)</label>
                     <input
-                      type="number"
+                      type="text"
+                      inputMode="numeric"
                       value={editOriginalPrice}
-                      onChange={(e) => setEditOriginalPrice(e.target.value.replace(/\D/g, "").slice(0, 7))}
+                      onChange={(e) => setEditOriginalPrice(e.target.value.replace(/[^\d]/g, "").slice(0, 7))}
                       className="w-full mt-1.5 h-11 px-3 bg-background border border-border rounded-lg"
                     />
                   </div>
