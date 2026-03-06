@@ -443,6 +443,15 @@ const Admin = () => {
                       </div>
                     ))}
                   </div>
+                  {order.notes && (
+                    <div className="p-3 rounded-lg bg-secondary/30 text-sm mb-3">
+                      <p className="font-medium text-xs text-muted-foreground mb-1">💬 Комментарий:</p>
+                      <p>{order.notes}</p>
+                    </div>
+                  )}
+                  {order.phone && (
+                    <p className="text-xs text-muted-foreground mb-3">📞 {order.phone}</p>
+                  )}
 
                   <div className="flex gap-2 flex-wrap">
                     {["pending", "processing", "shipped", "delivered", "cancelled"].map((s) => (
@@ -559,18 +568,20 @@ const Admin = () => {
                   <div>
                     <label className="text-sm text-muted-foreground">Цена</label>
                     <input
-                      type="number"
+                      type="text"
+                      inputMode="numeric"
                       value={editPrice}
-                      onChange={(e) => setEditPrice(e.target.value.replace(/\D/g, "").slice(0, 7))}
+                      onChange={(e) => setEditPrice(e.target.value.replace(/[^\d]/g, "").slice(0, 7))}
                       className="w-full mt-1.5 h-11 px-3 bg-background border border-border rounded-lg"
                     />
                   </div>
                   <div>
                     <label className="text-sm text-muted-foreground">Старая цена (скидка)</label>
                     <input
-                      type="number"
+                      type="text"
+                      inputMode="numeric"
                       value={editOriginalPrice}
-                      onChange={(e) => setEditOriginalPrice(e.target.value.replace(/\D/g, "").slice(0, 7))}
+                      onChange={(e) => setEditOriginalPrice(e.target.value.replace(/[^\d]/g, "").slice(0, 7))}
                       className="w-full mt-1.5 h-11 px-3 bg-background border border-border rounded-lg"
                     />
                   </div>
@@ -611,8 +622,8 @@ const Admin = () => {
                   {["tshirts", "outerwear", "shirts", "pants", "jeans", "shorts", "sweatshirts", "polo", "shoes", "suits", "accessories", "caps"].map((c) => <option key={c} value={c}>{c}</option>)}
                 </select>
                 <input value={customProduct.brand} onChange={(e) => setCustomProduct((p) => ({ ...p, brand: e.target.value.slice(0, 60) }))} placeholder="Бренд" className="h-11 px-3 bg-background border border-border rounded-lg" />
-                <input type="number" value={customProduct.price} onChange={(e) => setCustomProduct((p) => ({ ...p, price: e.target.value.replace(/\D/g, "").slice(0, 7) }))} placeholder="Цена" className="h-11 px-3 bg-background border border-border rounded-lg" />
-                <input type="number" value={customProduct.originalPrice} onChange={(e) => setCustomProduct((p) => ({ ...p, originalPrice: e.target.value.replace(/\D/g, "").slice(0, 7) }))} placeholder="Старая цена (опционально)" className="h-11 px-3 bg-background border border-border rounded-lg" />
+                <input type="text" inputMode="numeric" value={customProduct.price} onChange={(e) => setCustomProduct((p) => ({ ...p, price: e.target.value.replace(/[^\d]/g, "").slice(0, 7) }))} placeholder="Цена" className="h-11 px-3 bg-background border border-border rounded-lg" />
+                <input type="text" inputMode="numeric" value={customProduct.originalPrice} onChange={(e) => setCustomProduct((p) => ({ ...p, originalPrice: e.target.value.replace(/[^\d]/g, "").slice(0, 7) }))} placeholder="Старая цена (опционально)" className="h-11 px-3 bg-background border border-border rounded-lg" />
                 <div className="flex items-center gap-2">
                   <input id="custom-is-new" type="checkbox" checked={customProduct.isNew} onChange={(e) => setCustomProduct((p) => ({ ...p, isNew: e.target.checked }))} />
                   <label htmlFor="custom-is-new" className="text-sm">NEW</label>
@@ -625,25 +636,36 @@ const Admin = () => {
 
               <div className="mt-5 space-y-3">
                 {[1, 2, 3].map((n) => (
-                  <div key={n} className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                  <div key={n} className="grid grid-cols-1 md:grid-cols-3 gap-3 items-end">
                     <input
-                      value={customProduct[`color${n}Name` as const]}
+                      value={(customProduct as any)[`color${n}Name`]}
                       onChange={(e) => setCustomProduct((p) => ({ ...p, [`color${n}Name`]: e.target.value.slice(0, 30) }))}
                       placeholder={`Цвет ${n}: название`}
                       className="h-11 px-3 bg-background border border-border rounded-lg"
                     />
                     <input
-                      value={customProduct[`color${n}Hex` as const]}
+                      value={(customProduct as any)[`color${n}Hex`]}
                       onChange={(e) => setCustomProduct((p) => ({ ...p, [`color${n}Hex`]: e.target.value.slice(0, 7) }))}
                       placeholder={`Цвет ${n}: HEX (#000000)`}
                       className="h-11 px-3 bg-background border border-border rounded-lg"
                     />
-                    <input
-                      value={customProduct[`color${n}Image` as const]}
-                      onChange={(e) => setCustomProduct((p) => ({ ...p, [`color${n}Image`]: e.target.value.slice(0, 250) }))}
-                      placeholder={`Цвет ${n}: путь к фото`}
-                      className="h-11 px-3 bg-background border border-border rounded-lg"
-                    />
+                    <div className="flex items-center gap-2">
+                      <label className="h-11 px-3 bg-background border border-border rounded-lg flex items-center gap-2 cursor-pointer hover:border-primary/50 transition-colors flex-1 min-w-0">
+                        <span className="text-sm text-muted-foreground truncate">
+                          {(customProduct as any)[`color${n}Image`] ? '📷 Фото загружено' : '📷 Выбрать фото'}
+                        </span>
+                        <input type="file" accept="image/*" className="hidden" onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (!file) return;
+                          const reader = new FileReader();
+                          reader.onload = () => setCustomProduct((p) => ({ ...p, [`color${n}Image`]: reader.result as string }));
+                          reader.readAsDataURL(file);
+                        }} />
+                      </label>
+                      {(customProduct as any)[`color${n}Image`] && (
+                        <img src={(customProduct as any)[`color${n}Image`]} alt="" className="w-11 h-11 rounded-lg object-cover border border-border shrink-0" />
+                      )}
+                    </div>
                   </div>
                 ))}
               </div>

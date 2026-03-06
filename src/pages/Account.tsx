@@ -21,7 +21,7 @@ const passwordSchema = z.string().min(6, { message: "Пароль должен �
 const nameSchema = z.string().trim().min(2, { message: "Имя должно содержать минимум 2 символа" }).max(60, { message: "Имя слишком длинное" });
 
 const Account = () => {
-  const { user, isLoading: authLoading, signIn, signUp, signOut } = useAuth();
+  const { user, isLoading: authLoading, signIn, signUp, signOut, resetPassword } = useAuth();
   const { items: wishlistItems, removeFromWishlist } = useWishlist();
   const { orders, statusLabels } = useOrders();
   const [activeTab, setActiveTab] = useState<TabType>("profile");
@@ -279,7 +279,22 @@ const Account = () => {
                     : authMode === "login" ? "Войти" : "Зарегистрироваться"}
                 </Button>
               </form>
-              <div className="mt-6 text-center">
+              <div className="mt-4 text-center space-y-2">
+                {authMode === "login" && (
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      if (!email) { setGeneralError("Введите email для восстановления"); return; }
+                      const { error } = await resetPassword(email);
+                      if (error) { setGeneralError(error); return; }
+                      setGeneralError("");
+                      toast.success("Ссылка для сброса пароля отправлена на почту");
+                    }}
+                    className="text-primary text-sm hover:underline"
+                  >
+                    Забыли пароль?
+                  </button>
+                )}
                 <p className="text-muted-foreground text-sm">
                   {authMode === "login" ? "Нет аккаунта?" : "Уже есть аккаунт?"}{" "}
                   <button onClick={() => switchAuthMode(authMode === "login" ? "register" : "login")} className="text-primary hover:underline">
