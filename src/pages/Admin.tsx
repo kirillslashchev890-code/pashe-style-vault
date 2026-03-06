@@ -443,6 +443,15 @@ const Admin = () => {
                       </div>
                     ))}
                   </div>
+                  {order.notes && (
+                    <div className="p-3 rounded-lg bg-secondary/30 text-sm mb-3">
+                      <p className="font-medium text-xs text-muted-foreground mb-1">💬 Комментарий:</p>
+                      <p>{order.notes}</p>
+                    </div>
+                  )}
+                  {order.phone && (
+                    <p className="text-xs text-muted-foreground mb-3">📞 {order.phone}</p>
+                  )}
 
                   <div className="flex gap-2 flex-wrap">
                     {["pending", "processing", "shipped", "delivered", "cancelled"].map((s) => (
