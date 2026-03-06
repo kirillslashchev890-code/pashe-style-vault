@@ -15,6 +15,8 @@ interface ShippingAddress {
   city?: string;
   street?: string;
   apartment?: string;
+  entrance?: string;
+  floor?: string;
   zip?: string;
   delivery_days?: string;
   eta_date?: string;
@@ -28,6 +30,7 @@ interface AdminOrder {
   created_at: string;
   user_id: string;
   phone: string | null;
+  notes: string | null;
   shipping_address: ShippingAddress | null;
   items: any[];
 }
