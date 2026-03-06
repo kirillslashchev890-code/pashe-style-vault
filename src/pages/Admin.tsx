@@ -622,8 +622,8 @@ const Admin = () => {
                   {["tshirts", "outerwear", "shirts", "pants", "jeans", "shorts", "sweatshirts", "polo", "shoes", "suits", "accessories", "caps"].map((c) => <option key={c} value={c}>{c}</option>)}
                 </select>
                 <input value={customProduct.brand} onChange={(e) => setCustomProduct((p) => ({ ...p, brand: e.target.value.slice(0, 60) }))} placeholder="Бренд" className="h-11 px-3 bg-background border border-border rounded-lg" />
-                <input type="number" value={customProduct.price} onChange={(e) => setCustomProduct((p) => ({ ...p, price: e.target.value.replace(/\D/g, "").slice(0, 7) }))} placeholder="Цена" className="h-11 px-3 bg-background border border-border rounded-lg" />
-                <input type="number" value={customProduct.originalPrice} onChange={(e) => setCustomProduct((p) => ({ ...p, originalPrice: e.target.value.replace(/\D/g, "").slice(0, 7) }))} placeholder="Старая цена (опционально)" className="h-11 px-3 bg-background border border-border rounded-lg" />
+                <input type="text" inputMode="numeric" value={customProduct.price} onChange={(e) => setCustomProduct((p) => ({ ...p, price: e.target.value.replace(/[^\d]/g, "").slice(0, 7) }))} placeholder="Цена" className="h-11 px-3 bg-background border border-border rounded-lg" />
+                <input type="text" inputMode="numeric" value={customProduct.originalPrice} onChange={(e) => setCustomProduct((p) => ({ ...p, originalPrice: e.target.value.replace(/[^\d]/g, "").slice(0, 7) }))} placeholder="Старая цена (опционально)" className="h-11 px-3 bg-background border border-border rounded-lg" />
                 <div className="flex items-center gap-2">
                   <input id="custom-is-new" type="checkbox" checked={customProduct.isNew} onChange={(e) => setCustomProduct((p) => ({ ...p, isNew: e.target.checked }))} />
                   <label htmlFor="custom-is-new" className="text-sm">NEW</label>
