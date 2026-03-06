@@ -161,7 +161,7 @@ const Admin = () => {
     const { data } = await supabase
       .from("orders")
       .select(`
-        id, status, total, created_at, user_id, phone, shipping_address,
+        id, status, total, created_at, user_id, phone, notes, shipping_address,
         order_items ( id, product_name, size, color_name, quantity, price )
       `)
       .order("created_at", { ascending: false })

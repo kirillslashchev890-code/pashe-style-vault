@@ -118,10 +118,15 @@ export const StockProvider = ({ children }: { children: ReactNode }) => {
     setStockRecord((prev) => {
       const key = buildKey(productId, size, color);
       const current = prev[key] ?? DEFAULT_VARIANT_QTY;
-      return {
+      const next = {
         ...prev,
         [key]: Math.max(0, current - safeQty),
       };
+      // Save synchronously to prevent data loss on navigation
+      if (typeof window !== "undefined") {
+        window.localStorage.setItem(STOCK_STORAGE_KEY, JSON.stringify(next));
+      }
+      return next;
     });
   }, []);
 
