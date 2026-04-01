@@ -31,6 +31,8 @@ const Account = () => {
   const [isAdmin, setIsAdmin] = useState(false);
   const avatarRef = useRef<HTMLInputElement>(null);
   const navigate = useNavigate();
+  const [returnReason, setReturnReason] = useState<Record<string, string>>({});
+  const [returnSubmitting, setReturnSubmitting] = useState(false);
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
