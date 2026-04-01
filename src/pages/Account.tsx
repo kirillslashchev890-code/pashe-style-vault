@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { motion } from "framer-motion";
-import { User, Package, Heart, LogOut, Settings, Mail, Lock, Eye, EyeOff, AlertCircle, Trash2, Camera, Shield } from "lucide-react";
+import { User, Package, Heart, LogOut, Settings, Mail, Lock, Eye, EyeOff, AlertCircle, Trash2, Camera, Shield, RotateCcw } from "lucide-react";
 import { z } from "zod";
 import { useAuth } from "@/hooks/useAuth";
 import { useWishlist } from "@/hooks/useWishlist";
@@ -31,6 +31,8 @@ const Account = () => {
   const [isAdmin, setIsAdmin] = useState(false);
   const avatarRef = useRef<HTMLInputElement>(null);
   const navigate = useNavigate();
+  const [returnReason, setReturnReason] = useState<Record<string, string>>({});
+  const [returnSubmitting, setReturnSubmitting] = useState(false);
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -430,6 +432,34 @@ const Account = () => {
                             <span>Итого</span>
                             <span>{formatPrice(order.total)}</span>
                           </div>
+                          {order.status === "delivered" && (
+                            <div className="border-t border-border mt-3 pt-3">
+                              <p className="text-sm font-medium flex items-center gap-2 mb-2"><RotateCcw size={14} /> Оформить возврат</p>
+                              <div className="flex gap-2">
+                                <input
+                                  value={returnReason[order.id] || ""}
+                                  onChange={e => setReturnReason(prev => ({ ...prev, [order.id]: e.target.value }))}
+                                  placeholder="Причина возврата..."
+                                  className="flex-1 h-9 px-3 bg-background border border-border rounded-lg text-sm"
+                                />
+                                <Button size="sm" variant="outline" disabled={returnSubmitting || !returnReason[order.id]?.trim()} onClick={async () => {
+                                  if (!user || !returnReason[order.id]?.trim()) return;
+                                  setReturnSubmitting(true);
+                                  const { error } = await supabase.from("return_requests").insert({
+                                    order_id: order.id,
+                                    user_id: user.id,
+                                    reason: returnReason[order.id].trim(),
+                                  });
+                                  setReturnSubmitting(false);
+                                  if (error) { toast.error("Ошибка при отправке заявки"); return; }
+                                  toast.success("Заявка на возврат отправлена");
+                                  setReturnReason(prev => ({ ...prev, [order.id]: "" }));
+                                }}>
+                                  Отправить
+                                </Button>
+                              </div>
+                            </div>
+                          )}
                         </div>
                       ))}
                     </div>

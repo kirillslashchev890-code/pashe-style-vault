@@ -419,6 +419,39 @@ export type Database = {
         }
         Relationships: []
       }
+      return_requests: {
+        Row: {
+          admin_comment: string | null
+          created_at: string
+          id: string
+          order_id: string
+          reason: string
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          admin_comment?: string | null
+          created_at?: string
+          id?: string
+          order_id: string
+          reason: string
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          admin_comment?: string | null
+          created_at?: string
+          id?: string
+          order_id?: string
+          reason?: string
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       reviews: {
         Row: {
           created_at: string
@@ -490,6 +523,63 @@ export type Database = {
           shoulder_cm?: number | null
           size?: string
           waist_cm?: number | null
+        }
+        Relationships: []
+      }
+      stock_levels: {
+        Row: {
+          color_name: string
+          id: string
+          product_id: string
+          quantity: number
+          size: string
+        }
+        Insert: {
+          color_name: string
+          id?: string
+          product_id: string
+          quantity?: number
+          size: string
+        }
+        Update: {
+          color_name?: string
+          id?: string
+          product_id?: string
+          quantity?: number
+          size?: string
+        }
+        Relationships: []
+      }
+      support_messages: {
+        Row: {
+          admin_reply: string | null
+          content: string
+          conversation_id: string
+          created_at: string
+          id: string
+          needs_admin: boolean
+          role: string
+          user_id: string
+        }
+        Insert: {
+          admin_reply?: string | null
+          content: string
+          conversation_id?: string
+          created_at?: string
+          id?: string
+          needs_admin?: boolean
+          role?: string
+          user_id: string
+        }
+        Update: {
+          admin_reply?: string | null
+          content?: string
+          conversation_id?: string
+          created_at?: string
+          id?: string
+          needs_admin?: boolean
+          role?: string
+          user_id?: string
         }
         Relationships: []
       }

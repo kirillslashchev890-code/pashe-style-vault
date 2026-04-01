@@ -8,6 +8,7 @@ import { AuthProvider } from "@/hooks/useAuth";
 import { CartProvider } from "@/hooks/useCart";
 import { WishlistProvider } from "@/hooks/useWishlist";
 import { StockProvider } from "@/hooks/useStockManager";
+import SupportChat from "@/components/SupportChat";
 import Index from "./pages/Index";
 import Catalog from "./pages/Catalog";
 import Product from "./pages/Product";
@@ -40,6 +41,7 @@ const App = () => (
                     <Route path="/admin" element={<Admin />} />
                     <Route path="*" element={<NotFound />} />
                   </Routes>
+                  <SupportChat />
                 </BrowserRouter>
               </TooltipProvider>
             </StockProvider>
