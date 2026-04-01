@@ -154,7 +154,7 @@ const SupportChat = () => {
 
   return (
     <>
-      <AuthModal open={authOpen} onOpenChange={setAuthOpen} />
+      <AuthModal isOpen={authOpen} onClose={() => setAuthOpen(false)} />
 
       {!open && (
         <button
