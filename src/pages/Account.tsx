@@ -13,7 +13,7 @@ import { useOrders } from "@/hooks/useOrders";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
-type TabType = "profile" | "orders" | "wishlist" | "settings";
+type TabType = "profile" | "orders" | "wishlist" | "returns" | "settings";
 type AuthMode = "login" | "register";
 
 const emailSchema = z.string().trim().email({ message: "Введите корректный email (нужен символ @)" }).max(255, { message: "Email слишком длинный" });
