@@ -513,7 +513,38 @@ const Account = () => {
                 </div>
               )}
 
-              {activeTab === "settings" && (
+              {activeTab === "returns" && (
+                <div>
+                  <h2 className="text-xl font-semibold mb-6">Мои возвраты</h2>
+                  {myReturns.length === 0 ? (
+                    <div className="text-center py-12">
+                      <RotateCcw size={48} className="mx-auto text-muted-foreground mb-4" />
+                      <p className="text-muted-foreground">Заявок на возврат нет</p>
+                      <p className="text-xs text-muted-foreground mt-2">Оформить возврат можно во вкладке «Заказы» для доставленных заказов</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      {myReturns.map((ret) => (
+                        <div key={ret.id} className="border border-border rounded-xl p-4">
+                          <div className="flex items-center justify-between mb-2">
+                            <p className="font-medium">Возврат к заказу #{ret.order_id.slice(0, 8)}</p>
+                            <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
+                              ret.status === "approved" ? "bg-green-500/10 text-green-500" :
+                              ret.status === "rejected" ? "bg-destructive/10 text-destructive" : "bg-primary/10 text-primary"
+                            }`}>
+                              {ret.status === "pending" ? "На рассмотрении" : ret.status === "approved" ? "Одобрен" : "Отклонён"}
+                            </span>
+                          </div>
+                          <p className="text-sm text-muted-foreground">Причина: {ret.reason}</p>
+                          <p className="text-xs text-muted-foreground mt-1">{formatDate(ret.created_at)}</p>
+                          {ret.admin_comment && <p className="text-sm mt-2 p-2 bg-secondary/50 rounded-lg">💬 Ответ: {ret.admin_comment}</p>}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+
                 <div>
                   <h2 className="text-xl font-semibold mb-6">Настройки</h2>
                   <div className="space-y-6 max-w-md">
