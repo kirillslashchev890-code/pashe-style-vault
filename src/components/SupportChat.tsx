@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { MessageCircle, X, Send } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
@@ -21,10 +21,36 @@ const FAQ: Record<string, string> = {
   "скидка": "🏷️ Скидка 10% на первый заказ применяется автоматически при оформлении. Бесплатная доставка при заказе от 15 000₽.",
   "статус": "📦 Статус заказа можно отслеживать в «Личном кабинете → Заказы». После подтверждения администратором заказ будет в статусе «В пути».",
   "контакт": "📧 Свяжитесь с нами: support@pashe.ru. Вы также можете написать в этот чат, и оператор ответит вам.",
+  "обмен": "🔄 Обмен товара на другой размер/цвет возможен в течение 14 дней. Оформите возврат текущего товара и закажите новый.",
+  "гарантия": "🛡️ Гарантия на все товары — 30 дней. Если товар оказался бракованным, мы заменим его бесплатно.",
+  "время": "🕐 Время работы поддержки: пн-пт 9:00-18:00, сб 10:00-16:00. Воскресенье — выходной.",
+  "акция": "🔥 Следите за акциями на главной странице. Подпишитесь на рассылку, чтобы не пропустить скидки.",
 };
+
+const HELP_TEXT = `📋 **ПОМОЩЬ — доступные команды:**
+
+Напишите одно из ключевых слов, и я отвечу:
+• **доставка** — информация о доставке и сроках
+• **возврат** — как оформить возврат товара
+• **оплата** — способы оплаты
+• **размер** — таблица размеров
+• **самовывоз** — условия самовывоза
+• **скидка** — действующие скидки
+• **статус** — отслеживание заказа
+• **контакт** — связаться с нами
+• **обмен** — обмен товара
+• **гарантия** — гарантийные условия
+• **время** — часы работы
+• **акция** — текущие акции
+• **оператор** — связаться с живым оператором
+
+Если ваш вопрос не входит в список — просто напишите его, и мы передадим его оператору.`;
 
 const findFaqAnswer = (text: string): string | null => {
   const lower = text.toLowerCase();
+  if (lower === "помощь" || lower === "help" || lower === "/help" || lower === "команды") {
+    return HELP_TEXT;
+  }
   for (const [keyword, answer] of Object.entries(FAQ)) {
     if (lower.includes(keyword)) return answer;
   }
@@ -38,6 +64,7 @@ const SupportChat = () => {
   const [input, setInput] = useState("");
   const [authOpen, setAuthOpen] = useState(false);
   const [conversationId] = useState(() => crypto.randomUUID());
+  const [loadedReplyIds, setLoadedReplyIds] = useState<Set<string>>(new Set());
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -45,7 +72,7 @@ const SupportChat = () => {
       setMessages([{
         id: "welcome",
         role: "bot",
-        content: "👋 Здравствуйте! Я бот-помощник PASHE. Задайте вопрос о доставке, возврате, оплате, размерах или напишите «оператор» для связи с поддержкой.",
+        content: "👋 Здравствуйте! Я бот-помощник PASHE. Напишите «помощь» для списка доступных команд, или задайте вопрос напрямую.",
         created_at: new Date().toISOString(),
       }]);
     }
@@ -55,35 +82,46 @@ const SupportChat = () => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
   }, [messages]);
 
-  // Load admin replies
+  // Poll for admin replies - ONLY for this user's conversation
+  const pollReplies = useCallback(async () => {
+    if (!user || !open) return;
+    const { data } = await supabase
+      .from("support_messages")
+      .select("id, admin_reply, created_at")
+      .eq("user_id", user.id)
+      .eq("conversation_id", conversationId)
+      .not("admin_reply", "is", null)
+      .order("created_at", { ascending: true });
+
+    if (!data) return;
+
+    setLoadedReplyIds(prev => {
+      const newIds = new Set(prev);
+      const newMessages: Message[] = [];
+      data.forEach((msg: any) => {
+        const replyId = `admin-${msg.id}`;
+        if (!newIds.has(replyId)) {
+          newIds.add(replyId);
+          newMessages.push({
+            id: replyId,
+            role: "admin",
+            content: `👨‍💼 Оператор: ${msg.admin_reply}`,
+            created_at: msg.created_at,
+          });
+        }
+      });
+      if (newMessages.length > 0) {
+        setMessages(p => [...p, ...newMessages]);
+      }
+      return newIds;
+    });
+  }, [user, open, conversationId]);
+
   useEffect(() => {
     if (!user || !open) return;
-    const interval = setInterval(async () => {
-      const { data } = await supabase
-        .from("support_messages")
-        .select("*")
-        .eq("user_id", user.id)
-        .not("admin_reply", "is", null)
-        .order("created_at", { ascending: true });
-
-      if (data) {
-        data.forEach((msg: any) => {
-          if (msg.admin_reply && !messages.find(m => m.id === `admin-${msg.id}`)) {
-            setMessages(prev => {
-              if (prev.find(m => m.id === `admin-${msg.id}`)) return prev;
-              return [...prev, {
-                id: `admin-${msg.id}`,
-                role: "admin",
-                content: `👨‍💼 Оператор: ${msg.admin_reply}`,
-                created_at: msg.created_at,
-              }];
-            });
-          }
-        });
-      }
-    }, 5000);
+    const interval = setInterval(pollReplies, 5000);
     return () => clearInterval(interval);
-  }, [user, open, messages]);
+  }, [user, open, pollReplies]);
 
   const send = async () => {
     if (!input.trim()) return;
@@ -147,7 +185,7 @@ const SupportChat = () => {
     setMessages(prev => [...prev, {
       id: crypto.randomUUID(),
       role: "bot",
-      content: "🤔 Я не смог найти ответ на ваш вопрос. Сообщение передано оператору — ожидайте ответа.",
+      content: "🤔 Я не смог найти ответ на ваш вопрос. Сообщение передано оператору — ожидайте ответа. Напишите «помощь» для списка доступных команд.",
       created_at: new Date().toISOString(),
     }]);
   };
@@ -175,7 +213,7 @@ const SupportChat = () => {
           <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 space-y-3">
             {messages.map(msg => (
               <div key={msg.id} className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
-                <div className={`max-w-[80%] px-3 py-2 rounded-xl text-sm ${
+                <div className={`max-w-[80%] px-3 py-2 rounded-xl text-sm whitespace-pre-line ${
                   msg.role === "user"
                     ? "bg-primary text-primary-foreground"
                     : msg.role === "admin"
@@ -193,7 +231,7 @@ const SupportChat = () => {
               value={input}
               onChange={e => setInput(e.target.value)}
               onKeyDown={e => e.key === "Enter" && send()}
-              placeholder="Напишите сообщение..."
+              placeholder="Напишите «помощь» или вопрос..."
               className="flex-1 h-10 px-3 bg-background border border-border rounded-lg text-sm"
             />
             <Button size="icon" className="h-10 w-10 shrink-0" onClick={send}>
