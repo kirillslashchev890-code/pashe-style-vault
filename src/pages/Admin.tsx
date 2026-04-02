@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 import Layout from "@/components/layout/Layout";
 import { Button } from "@/components/ui/button";
@@ -95,7 +96,7 @@ const defaultCustomProduct = {
   color3Image: "",
 };
 
-type TabId = "orders" | "users" | "reviews" | "inventory" | "products" | "returns" | "procurement" | "support";
+type TabId = "orders" | "users" | "reviews" | "inventory" | "products" | "returns" | "procurement" | "support" | "revenue";
 
 const SEASONS: Record<string, string> = { winter: "Зима", spring: "Весна", summer: "Лето", autumn: "Осень" };
 
@@ -345,15 +346,38 @@ const Admin = () => {
   const lowStockProducts = allLowStock();
   const selectedProduct = allProducts.find(p => p.id === selectedProductId);
 
-  // Procurement: group low stock by season
+  // Procurement: 1 random low-stock item per category
   const currentSeason = getCurrentSeason();
-  const procurementItems = lowStockProducts.map(p => {
-    const fullProduct = allProducts.find(pr => pr.id === p.id);
-    const season = fullProduct?.season || "all";
-    const isCurrentSeason = season === currentSeason || season === "all";
-    const suggestedQty = isCurrentSeason ? 50 : 15;
-    return { ...p, season, isCurrentSeason, suggestedQty };
-  });
+  const procurementItems = (() => {
+    const byCategory: Record<string, typeof lowStockProducts[0]> = {};
+    lowStockProducts.forEach(p => {
+      if (!byCategory[p.category] || p.count < byCategory[p.category].count) {
+        byCategory[p.category] = p;
+      }
+    });
+    return Object.values(byCategory).map(p => {
+      const fullProduct = allProducts.find(pr => pr.id === p.id);
+      const season = fullProduct?.season || "all";
+      const isCurrentSeason = season === currentSeason || season === "all";
+      const suggestedQty = isCurrentSeason ? 50 : 15;
+      return { ...p, season, isCurrentSeason, suggestedQty };
+    });
+  })();
+
+  // Revenue report by month
+  const revenueByMonth = (() => {
+    const months: Record<string, { revenue: number; items: { name: string; qty: number; total: number }[] }> = {};
+    orders.filter(o => o.status === "delivered").forEach(o => {
+      const d = new Date(o.created_at);
+      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+      if (!months[key]) months[key] = { revenue: 0, items: [] };
+      months[key].revenue += o.total;
+      o.items.forEach((item: any) => {
+        months[key].items.push({ name: item.product_name, qty: item.quantity, total: item.price * item.quantity });
+      });
+    });
+    return Object.entries(months).sort((a, b) => b[0].localeCompare(a[0]));
+  })();
 
   if (authLoading || isAdmin === null) {
     return <Layout><div className="container mx-auto px-4 py-24 text-center"><div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin mx-auto" /></div></Layout>;
@@ -381,6 +405,7 @@ const Admin = () => {
     { id: "returns", icon: RotateCcw, label: "Возвраты" },
     { id: "procurement", icon: ShoppingCart, label: "Закупки" },
     { id: "support", icon: MessageCircle, label: "Поддержка" },
+    { id: "revenue", icon: BarChart3, label: "Выручка" },
   ];
 
   return (
@@ -504,7 +529,7 @@ const Admin = () => {
           <div className="bg-card border border-border rounded-xl overflow-hidden">
             <div className="p-4 border-b border-border flex items-center justify-between">
               <h3 className="font-semibold">Товары с малым остатком (≤10 шт)</h3>
-              <Button variant="outline" size="sm" onClick={refreshStock}>Обновить</Button>
+              <Button variant="outline" size="sm" onClick={async () => { await refreshStock(); toast.success("Остатки обновлены"); }}>Обновить</Button>
             </div>
             <table className="w-full text-sm">
               <thead><tr className="border-b border-border bg-secondary/30">
@@ -684,6 +709,42 @@ const Admin = () => {
                     <Button size="sm" className="btn-gold" onClick={() => handleSupportReply(msg.id)}>Ответить</Button>
                   </div>
                 )}
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* REVENUE REPORT */}
+        {tab === "revenue" && (
+          <div className="space-y-6">
+            <div className="bg-card border border-border rounded-xl p-5">
+              <h3 className="font-semibold mb-2">📊 Отчёт по выручке</h3>
+              <p className="text-sm text-muted-foreground">Данные по доставленным заказам за каждый месяц.</p>
+            </div>
+            {revenueByMonth.length === 0 ? (
+              <p className="text-center text-muted-foreground py-12">Нет данных о выручке</p>
+            ) : revenueByMonth.map(([month, data]) => (
+              <div key={month} className="bg-card border border-border rounded-xl overflow-hidden">
+                <div className="p-4 border-b border-border flex items-center justify-between bg-secondary/30">
+                  <h4 className="font-semibold">{new Date(month + "-01").toLocaleDateString("ru-RU", { month: "long", year: "numeric" })}</h4>
+                  <span className="text-lg font-bold text-primary">{formatPrice(data.revenue)}</span>
+                </div>
+                <table className="w-full text-sm">
+                  <thead><tr className="border-b border-border">
+                    <th className="text-left p-3 font-semibold">Товар</th>
+                    <th className="text-left p-3 font-semibold">Кол-во</th>
+                    <th className="text-left p-3 font-semibold">Сумма</th>
+                  </tr></thead>
+                  <tbody>
+                    {data.items.map((item, idx) => (
+                      <tr key={idx} className="border-b border-border last:border-0">
+                        <td className="p-3">{item.name}</td>
+                        <td className="p-3 text-muted-foreground">{item.qty} шт</td>
+                        <td className="p-3 font-medium">{formatPrice(item.total)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
             ))}
           </div>
