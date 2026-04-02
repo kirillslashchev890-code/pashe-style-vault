@@ -345,15 +345,38 @@ const Admin = () => {
   const lowStockProducts = allLowStock();
   const selectedProduct = allProducts.find(p => p.id === selectedProductId);
 
-  // Procurement: group low stock by season
+  // Procurement: 1 random low-stock item per category
   const currentSeason = getCurrentSeason();
-  const procurementItems = lowStockProducts.map(p => {
-    const fullProduct = allProducts.find(pr => pr.id === p.id);
-    const season = fullProduct?.season || "all";
-    const isCurrentSeason = season === currentSeason || season === "all";
-    const suggestedQty = isCurrentSeason ? 50 : 15;
-    return { ...p, season, isCurrentSeason, suggestedQty };
-  });
+  const procurementItems = (() => {
+    const byCategory: Record<string, typeof lowStockProducts[0]> = {};
+    lowStockProducts.forEach(p => {
+      if (!byCategory[p.category] || p.count < byCategory[p.category].count) {
+        byCategory[p.category] = p;
+      }
+    });
+    return Object.values(byCategory).map(p => {
+      const fullProduct = allProducts.find(pr => pr.id === p.id);
+      const season = fullProduct?.season || "all";
+      const isCurrentSeason = season === currentSeason || season === "all";
+      const suggestedQty = isCurrentSeason ? 50 : 15;
+      return { ...p, season, isCurrentSeason, suggestedQty };
+    });
+  })();
+
+  // Revenue report by month
+  const revenueByMonth = (() => {
+    const months: Record<string, { revenue: number; items: { name: string; qty: number; total: number }[] }> = {};
+    orders.filter(o => o.status === "delivered").forEach(o => {
+      const d = new Date(o.created_at);
+      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+      if (!months[key]) months[key] = { revenue: 0, items: [] };
+      months[key].revenue += o.total;
+      o.items.forEach((item: any) => {
+        months[key].items.push({ name: item.product_name, qty: item.quantity, total: item.price * item.quantity });
+      });
+    });
+    return Object.entries(months).sort((a, b) => b[0].localeCompare(a[0]));
+  })();
 
   if (authLoading || isAdmin === null) {
     return <Layout><div className="container mx-auto px-4 py-24 text-center"><div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin mx-auto" /></div></Layout>;
