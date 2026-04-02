@@ -118,6 +118,36 @@ export type Database = {
           },
         ]
       }
+      monthly_revenue_snapshots: {
+        Row: {
+          created_at: string
+          delivered_orders: number
+          id: string
+          items_summary: Json
+          month_key: string
+          revenue: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          delivered_orders?: number
+          id?: string
+          items_summary?: Json
+          month_key: string
+          revenue?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          delivered_orders?: number
+          id?: string
+          items_summary?: Json
+          month_key?: string
+          revenue?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       order_items: {
         Row: {
           color_name: string | null
@@ -423,9 +453,12 @@ export type Database = {
         Row: {
           admin_comment: string | null
           created_at: string
+          defect_photo_url: string | null
           id: string
           order_id: string
           reason: string
+          return_description: string | null
+          return_shipping_note: string | null
           status: string
           updated_at: string
           user_id: string
@@ -433,9 +466,12 @@ export type Database = {
         Insert: {
           admin_comment?: string | null
           created_at?: string
+          defect_photo_url?: string | null
           id?: string
           order_id: string
           reason: string
+          return_description?: string | null
+          return_shipping_note?: string | null
           status?: string
           updated_at?: string
           user_id: string
@@ -443,9 +479,12 @@ export type Database = {
         Update: {
           admin_comment?: string | null
           created_at?: string
+          defect_photo_url?: string | null
           id?: string
           order_id?: string
           reason?: string
+          return_description?: string | null
+          return_shipping_note?: string | null
           status?: string
           updated_at?: string
           user_id?: string
@@ -553,32 +592,44 @@ export type Database = {
       support_messages: {
         Row: {
           admin_reply: string | null
+          assigned_admin_id: string | null
           content: string
           conversation_id: string
           created_at: string
           id: string
           needs_admin: boolean
+          resolved_at: string | null
+          resolved_by: string | null
           role: string
+          ticket_status: string
           user_id: string
         }
         Insert: {
           admin_reply?: string | null
+          assigned_admin_id?: string | null
           content: string
           conversation_id?: string
           created_at?: string
           id?: string
           needs_admin?: boolean
+          resolved_at?: string | null
+          resolved_by?: string | null
           role?: string
+          ticket_status?: string
           user_id: string
         }
         Update: {
           admin_reply?: string | null
+          assigned_admin_id?: string | null
           content?: string
           conversation_id?: string
           created_at?: string
           id?: string
           needs_admin?: boolean
+          resolved_at?: string | null
+          resolved_by?: string | null
           role?: string
+          ticket_status?: string
           user_id?: string
         }
         Relationships: []
