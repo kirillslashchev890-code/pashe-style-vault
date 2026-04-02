@@ -404,6 +404,7 @@ const Admin = () => {
     { id: "returns", icon: RotateCcw, label: "Возвраты" },
     { id: "procurement", icon: ShoppingCart, label: "Закупки" },
     { id: "support", icon: MessageCircle, label: "Поддержка" },
+    { id: "revenue", icon: BarChart3, label: "Выручка" },
   ];
 
   return (
