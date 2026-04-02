@@ -59,12 +59,25 @@ const Account = () => {
   const [nameError, setNameError] = useState("");
   const [generalError, setGeneralError] = useState("");
 
+  const [myReturns, setMyReturns] = useState<any[]>([]);
+
   const tabs = [
     { id: "profile" as TabType, label: "Профиль", icon: User },
     { id: "orders" as TabType, label: "Заказы", icon: Package },
     { id: "wishlist" as TabType, label: "Избранное", icon: Heart },
+    { id: "returns" as TabType, label: "Возвраты", icon: RotateCcw },
     { id: "settings" as TabType, label: "Настройки", icon: Settings },
   ];
+
+  // Load return requests
+  useEffect(() => {
+    if (!user) return;
+    const loadReturns = async () => {
+      const { data } = await supabase.from("return_requests").select("*").eq("user_id", user.id).order("created_at", { ascending: false });
+      setMyReturns(data || []);
+    };
+    loadReturns();
+  }, [user, activeTab]);
 
   useEffect(() => {
     if (!user) return;

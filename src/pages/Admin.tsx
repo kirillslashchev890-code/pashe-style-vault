@@ -713,6 +713,42 @@ const Admin = () => {
             ))}
           </div>
         )}
+
+        {/* REVENUE REPORT */}
+        {tab === "revenue" && (
+          <div className="space-y-6">
+            <div className="bg-card border border-border rounded-xl p-5">
+              <h3 className="font-semibold mb-2">📊 Отчёт по выручке</h3>
+              <p className="text-sm text-muted-foreground">Данные по доставленным заказам за каждый месяц.</p>
+            </div>
+            {revenueByMonth.length === 0 ? (
+              <p className="text-center text-muted-foreground py-12">Нет данных о выручке</p>
+            ) : revenueByMonth.map(([month, data]) => (
+              <div key={month} className="bg-card border border-border rounded-xl overflow-hidden">
+                <div className="p-4 border-b border-border flex items-center justify-between bg-secondary/30">
+                  <h4 className="font-semibold">{new Date(month + "-01").toLocaleDateString("ru-RU", { month: "long", year: "numeric" })}</h4>
+                  <span className="text-lg font-bold text-primary">{formatPrice(data.revenue)}</span>
+                </div>
+                <table className="w-full text-sm">
+                  <thead><tr className="border-b border-border">
+                    <th className="text-left p-3 font-semibold">Товар</th>
+                    <th className="text-left p-3 font-semibold">Кол-во</th>
+                    <th className="text-left p-3 font-semibold">Сумма</th>
+                  </tr></thead>
+                  <tbody>
+                    {data.items.map((item, idx) => (
+                      <tr key={idx} className="border-b border-border last:border-0">
+                        <td className="p-3">{item.name}</td>
+                        <td className="p-3 text-muted-foreground">{item.qty} шт</td>
+                        <td className="p-3 font-medium">{formatPrice(item.total)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </Layout>
   );
