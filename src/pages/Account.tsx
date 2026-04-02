@@ -545,6 +545,7 @@ const Account = () => {
                 </div>
               )}
 
+              {activeTab === "settings" && (
                 <div>
                   <h2 className="text-xl font-semibold mb-6">Настройки</h2>
                   <div className="space-y-6 max-w-md">
