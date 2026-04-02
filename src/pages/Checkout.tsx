@@ -153,10 +153,10 @@ const Checkout = () => {
 
     if (error) { toast.error("Ошибка при оформлении заказа"); setIsOrdering(false); return; }
 
-    items.forEach((item) => {
+    for (const item of items) {
       const fallbackColor = item.color_name || getProductById(item.product_id)?.colors[0]?.name || "Базовый";
-      decrementStock(item.product_id, item.size, fallbackColor, item.quantity);
-    });
+      await decrementStock(item.product_id, item.size, fallbackColor, item.quantity);
+    }
 
     await clearCart();
     toast.success("Заказ успешно оформлен! 🎉");

@@ -32,6 +32,8 @@ const Account = () => {
   const avatarRef = useRef<HTMLInputElement>(null);
   const navigate = useNavigate();
   const [returnReason, setReturnReason] = useState<Record<string, string>>({});
+  const [returnDescription, setReturnDescription] = useState<Record<string, string>>({});
+  const [returnPhoto, setReturnPhoto] = useState<Record<string, string>>({});
   const [returnSubmitting, setReturnSubmitting] = useState(false);
 
   const [email, setEmail] = useState("");
@@ -134,6 +136,15 @@ const Account = () => {
     await supabase.from("profiles").update({ avatar_url: avatarUrl } as any).eq("user_id", user.id);
     setProfileAvatar(avatarUrl);
     toast.success("Аватарка обновлена");
+  };
+
+  const handleReturnPhotoUpload = (orderId: string, file?: File) => {
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      setReturnPhoto((prev) => ({ ...prev, [orderId]: reader.result as string }));
+    };
+    reader.readAsDataURL(file);
   };
 
   const saveProfile = async (e: React.FormEvent) => {
@@ -448,13 +459,26 @@ const Account = () => {
                           {order.status === "delivered" && (
                             <div className="border-t border-border mt-3 pt-3">
                               <p className="text-sm font-medium flex items-center gap-2 mb-2"><RotateCcw size={14} /> Оформить возврат</p>
-                              <div className="flex gap-2">
+                              <div className="space-y-2">
                                 <input
                                   value={returnReason[order.id] || ""}
                                   onChange={e => setReturnReason(prev => ({ ...prev, [order.id]: e.target.value }))}
-                                  placeholder="Причина возврата..."
-                                  className="flex-1 h-9 px-3 bg-background border border-border rounded-lg text-sm"
+                                  placeholder="Причина возврата (например: брак, размер, повреждение)"
+                                  className="w-full h-9 px-3 bg-background border border-border rounded-lg text-sm"
                                 />
+                                <textarea
+                                  value={returnDescription[order.id] || ""}
+                                  onChange={e => setReturnDescription(prev => ({ ...prev, [order.id]: e.target.value.slice(0, 600) }))}
+                                  placeholder="Подробно опишите проблему"
+                                  className="w-full min-h-24 px-3 py-2 bg-background border border-border rounded-lg text-sm"
+                                />
+                                <div className="flex flex-wrap items-center gap-2">
+                                  <label className="inline-flex items-center gap-2 px-3 h-9 border border-border rounded-lg cursor-pointer hover:border-primary transition-colors text-sm">
+                                    <span>Прикрепить фото брака</span>
+                                    <input type="file" accept="image/*" className="hidden" onChange={e => handleReturnPhotoUpload(order.id, e.target.files?.[0])} />
+                                  </label>
+                                  {returnPhoto[order.id] && <img src={returnPhoto[order.id]} alt="Фото брака" className="w-14 h-14 rounded-lg object-cover border border-border" />}
+                                </div>
                                 <Button size="sm" variant="outline" disabled={returnSubmitting || !returnReason[order.id]?.trim()} onClick={async () => {
                                   if (!user || !returnReason[order.id]?.trim()) return;
                                   setReturnSubmitting(true);
@@ -462,11 +486,16 @@ const Account = () => {
                                     order_id: order.id,
                                     user_id: user.id,
                                     reason: returnReason[order.id].trim(),
+                                    return_description: (returnDescription[order.id] || "").trim() || null,
+                                    defect_photo_url: returnPhoto[order.id] || null,
+                                    return_shipping_note: "Если возврат будет одобрен, отправьте товар обратно за свой счёт. Администратор пришлёт инструкции в ответе по заявке.",
                                   });
                                   setReturnSubmitting(false);
                                   if (error) { toast.error("Ошибка при отправке заявки"); return; }
                                   toast.success("Заявка на возврат отправлена");
                                   setReturnReason(prev => ({ ...prev, [order.id]: "" }));
+                                  setReturnDescription(prev => ({ ...prev, [order.id]: "" }));
+                                  setReturnPhoto(prev => ({ ...prev, [order.id]: "" }));
                                 }}>
                                   Отправить
                                 </Button>
@@ -536,8 +565,11 @@ const Account = () => {
                             </span>
                           </div>
                           <p className="text-sm text-muted-foreground">Причина: {ret.reason}</p>
+                          {ret.return_description && <p className="text-sm mt-2">Описание: {ret.return_description}</p>}
+                          {ret.defect_photo_url && <img src={ret.defect_photo_url} alt="Фото брака" className="mt-3 w-32 h-32 object-cover rounded-lg border border-border" />}
                           <p className="text-xs text-muted-foreground mt-1">{formatDate(ret.created_at)}</p>
                           {ret.admin_comment && <p className="text-sm mt-2 p-2 bg-secondary/50 rounded-lg">💬 Ответ: {ret.admin_comment}</p>}
+                          {ret.return_shipping_note && <p className="text-xs mt-2 text-muted-foreground">↩️ {ret.return_shipping_note}</p>}
                         </div>
                       ))}
                     </div>
