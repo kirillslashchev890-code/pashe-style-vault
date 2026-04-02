@@ -95,7 +95,7 @@ const defaultCustomProduct = {
   color3Image: "",
 };
 
-type TabId = "orders" | "users" | "reviews" | "inventory" | "products" | "returns" | "procurement" | "support";
+type TabId = "orders" | "users" | "reviews" | "inventory" | "products" | "returns" | "procurement" | "support" | "revenue";
 
 const SEASONS: Record<string, string> = { winter: "Зима", spring: "Весна", summer: "Лето", autumn: "Осень" };
 
