@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 import Layout from "@/components/layout/Layout";
@@ -60,15 +60,22 @@ interface ReturnRequest {
   status: string;
   admin_comment: string | null;
   created_at: string;
+  defect_photo_url?: string | null;
+  return_description?: string | null;
+  return_shipping_note?: string | null;
 }
 
 interface SupportMsg {
   id: string;
   user_id: string;
+  conversation_id: string;
+  role: string;
   content: string;
   needs_admin: boolean;
   admin_reply: string | null;
   created_at: string;
+  ticket_status?: string;
+  assigned_admin_id?: string | null;
 }
 
 const ADMIN_EMAIL = "admin1@gmail.com";
@@ -131,6 +138,7 @@ const Admin = () => {
   const [customProduct, setCustomProduct] = useState(defaultCustomProduct);
   const [replyText, setReplyText] = useState<Record<string, string>>({});
   const [returnComment, setReturnComment] = useState<Record<string, string>>({});
+  const [activeConversationId, setActiveConversationId] = useState<string | null>(null);
 
   useEffect(() => {
     if (authLoading) return;
@@ -202,7 +210,25 @@ const Admin = () => {
   const fetchOrders = async () => {
     setLoading(true);
     const { data } = await supabase.from("orders").select(`id, status, total, created_at, user_id, phone, notes, shipping_address, order_items ( id, product_name, size, color_name, quantity, price )`).order("created_at", { ascending: false }).limit(200);
-    setOrders((data || []).map((o: any) => ({ ...o, items: o.order_items || [] })));
+    const mapped = (data || []).map((o: any) => ({ ...o, items: o.order_items || [] }));
+    setOrders(mapped);
+
+    const monthMap: Record<string, { revenue: number; delivered_orders: number; items_summary: { name: string; qty: number; total: number }[] }> = {};
+    mapped.filter((o: any) => o.status === "delivered").forEach((o: any) => {
+      const d = new Date(o.created_at);
+      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+      if (!monthMap[key]) monthMap[key] = { revenue: 0, delivered_orders: 0, items_summary: [] };
+      monthMap[key].revenue += Number(o.total || 0);
+      monthMap[key].delivered_orders += 1;
+      (o.items || []).forEach((item: any) => {
+        monthMap[key].items_summary.push({ name: item.product_name, qty: item.quantity, total: item.price * item.quantity });
+      });
+    });
+
+    const snapshotRows = Object.entries(monthMap).map(([month_key, value]) => ({ month_key, ...value }));
+    if (snapshotRows.length > 0) {
+      await supabase.from("monthly_revenue_snapshots").upsert(snapshotRows as any, { onConflict: "month_key" });
+    }
     setLoading(false);
   };
 
@@ -222,7 +248,7 @@ const Admin = () => {
   };
 
   const fetchSupportMsgs = async () => {
-    const { data } = await supabase.from("support_messages").select("*").eq("needs_admin", true).order("created_at", { ascending: false }).limit(100);
+    const { data } = await supabase.from("support_messages").select("*").neq("ticket_status", "resolved").order("created_at", { ascending: true }).limit(300);
     setSupportMsgs((data as SupportMsg[]) || []);
   };
 
@@ -260,11 +286,36 @@ const Admin = () => {
     fetchOrders();
   };
 
-  const handleSupportReply = async (msgId: string) => {
-    const reply = replyText[msgId]?.trim();
+  const acceptSupportTicket = async (conversationId: string) => {
+    if (!user) return;
+    await supabase
+      .from("support_messages")
+      .update({ ticket_status: "in_progress", assigned_admin_id: user.id } as any)
+      .eq("conversation_id", conversationId)
+      .neq("ticket_status", "resolved");
+    setActiveConversationId(conversationId);
+    fetchSupportMsgs();
+  };
+
+  const resolveSupportTicket = async (conversationId: string) => {
+    if (!user) return;
+    await supabase
+      .from("support_messages")
+      .update({ ticket_status: "resolved", resolved_at: new Date().toISOString(), resolved_by: user.id, needs_admin: false } as any)
+      .eq("conversation_id", conversationId);
+    if (activeConversationId === conversationId) setActiveConversationId(null);
+    fetchSupportMsgs();
+  };
+
+  const handleSupportReply = async (conversationId: string) => {
+    const reply = replyText[conversationId]?.trim();
     if (!reply) return;
-    await supabase.from("support_messages").update({ admin_reply: reply }).eq("id", msgId);
-    setReplyText(prev => ({ ...prev, [msgId]: "" }));
+    const targetMessage = [...supportMsgs]
+      .reverse()
+      .find((msg) => msg.conversation_id === conversationId && msg.role === "user" && !msg.admin_reply);
+    if (!targetMessage) return;
+    await supabase.from("support_messages").update({ admin_reply: reply, ticket_status: "in_progress", assigned_admin_id: user?.id } as any).eq("id", targetMessage.id);
+    setReplyText(prev => ({ ...prev, [conversationId]: "" }));
     fetchSupportMsgs();
   };
 
@@ -345,6 +396,20 @@ const Admin = () => {
 
   const lowStockProducts = allLowStock();
   const selectedProduct = allProducts.find(p => p.id === selectedProductId);
+  const supportTickets = useMemo(() => {
+    const grouped = new Map<string, SupportMsg>();
+    supportMsgs.filter(msg => msg.role === "user").forEach((msg) => {
+      const existing = grouped.get(msg.conversation_id);
+      if (!existing || new Date(msg.created_at).getTime() > new Date(existing.created_at).getTime()) {
+        grouped.set(msg.conversation_id, msg);
+      }
+    });
+    return Array.from(grouped.values()).sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+  }, [supportMsgs]);
+
+  const activeConversationMessages = activeConversationId
+    ? supportMsgs.filter(msg => msg.conversation_id === activeConversationId).sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())
+    : [];
 
   // Procurement: 1 random low-stock item per category
   const currentSeason = getCurrentSeason();
@@ -637,6 +702,8 @@ const Admin = () => {
                   </span>
                 </div>
                 <p className="text-sm mb-3">Причина: {ret.reason}</p>
+                {ret.return_description && <p className="text-sm mb-3 text-muted-foreground">Описание: {ret.return_description}</p>}
+                {ret.defect_photo_url && <img src={ret.defect_photo_url} alt="Брак" className="mb-3 w-32 h-32 rounded-lg object-cover border border-border" />}
                 {ret.status === "pending" && (
                   <div className="space-y-2">
                     <input value={returnComment[ret.id] || ""} onChange={e => setReturnComment(prev => ({ ...prev, [ret.id]: e.target.value }))} placeholder="Комментарий (необязательно)" className="w-full h-10 px-3 bg-background border border-border rounded-lg text-sm" />
@@ -647,6 +714,7 @@ const Admin = () => {
                   </div>
                 )}
                 {ret.admin_comment && <p className="text-xs text-muted-foreground mt-2">💬 Ответ: {ret.admin_comment}</p>}
+                {ret.return_shipping_note && <p className="text-xs text-muted-foreground mt-2">↩️ {ret.return_shipping_note}</p>}
               </div>
             ))}
           </div>
@@ -689,28 +757,63 @@ const Admin = () => {
 
         {/* SUPPORT MESSAGES */}
         {tab === "support" && (
-          <div className="space-y-4">
-            <div className="flex items-center justify-between mb-2">
-              <h3 className="font-semibold">Запросы клиентов (требуют ответа оператора)</h3>
-              <Button variant="outline" size="sm" onClick={fetchSupportMsgs}>Обновить</Button>
-            </div>
-            {supportMsgs.length === 0 ? <p className="text-center text-muted-foreground py-12">Нет запросов</p> : supportMsgs.map(msg => (
-              <div key={msg.id} className="bg-card border border-border rounded-xl p-5">
-                <div className="flex items-center justify-between mb-2">
-                  <p className="text-sm text-muted-foreground">Клиент: {msg.user_id.slice(0, 8)} • {formatDate(msg.created_at)}</p>
-                  {msg.admin_reply && <span className="text-xs text-primary font-medium">✅ Отвечено</span>}
-                </div>
-                <p className="text-sm mb-3 font-medium">💬 {msg.content}</p>
-                {msg.admin_reply ? (
-                  <p className="text-sm text-muted-foreground">👨‍💼 Ваш ответ: {msg.admin_reply}</p>
-                ) : (
-                  <div className="flex gap-2">
-                    <input value={replyText[msg.id] || ""} onChange={e => setReplyText(prev => ({ ...prev, [msg.id]: e.target.value }))} placeholder="Написать ответ..." className="flex-1 h-10 px-3 bg-background border border-border rounded-lg text-sm" />
-                    <Button size="sm" className="btn-gold" onClick={() => handleSupportReply(msg.id)}>Ответить</Button>
-                  </div>
-                )}
+          <div className="grid grid-cols-1 lg:grid-cols-[320px_minmax(0,1fr)] gap-4">
+            <div className="bg-card border border-border rounded-xl p-4 space-y-3">
+              <div className="flex items-center justify-between">
+                <h3 className="font-semibold">Обращения</h3>
+                <Button variant="outline" size="sm" onClick={fetchSupportMsgs}>Обновить</Button>
               </div>
-            ))}
+              {supportTickets.length === 0 ? <p className="text-sm text-muted-foreground py-8 text-center">Нет активных обращений</p> : supportTickets.map(ticket => (
+                <button
+                  key={ticket.conversation_id}
+                  onClick={() => setActiveConversationId(ticket.conversation_id)}
+                  className={`w-full text-left border rounded-xl p-3 transition-colors ${activeConversationId === ticket.conversation_id ? "border-primary bg-primary/10" : "border-border hover:border-primary/40"}`}
+                >
+                  <div className="flex items-center justify-between gap-2 mb-2">
+                    <span className="text-sm font-medium">Клиент {ticket.user_id.slice(0, 8)}</span>
+                    <span className="text-[11px] text-muted-foreground">{ticket.ticket_status === "in_progress" ? "В работе" : "Новое"}</span>
+                  </div>
+                  <p className="text-sm line-clamp-2">{ticket.content}</p>
+                  <div className="flex gap-2 mt-3">
+                    <Button type="button" size="sm" variant="outline" onClick={(e) => { e.stopPropagation(); acceptSupportTicket(ticket.conversation_id); }}>Принять</Button>
+                    <Button type="button" size="sm" variant="outline" onClick={(e) => { e.stopPropagation(); resolveSupportTicket(ticket.conversation_id); }}>Выполнено</Button>
+                  </div>
+                </button>
+              ))}
+            </div>
+            <div className="bg-card border border-border rounded-xl p-5">
+              {!activeConversationId ? (
+                <p className="text-muted-foreground text-center py-16">Выберите обращение слева</p>
+              ) : (
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h4 className="font-semibold">Чат с клиентом</h4>
+                      <p className="text-sm text-muted-foreground">Диалог по конкретному обращению</p>
+                    </div>
+                    <Button size="sm" variant="outline" onClick={() => resolveSupportTicket(activeConversationId)}>Выполнено</Button>
+                  </div>
+                  <div className="space-y-3 max-h-[420px] overflow-y-auto pr-1">
+                    {activeConversationMessages.map((msg) => (
+                      <div key={msg.id} className="space-y-2">
+                        <div className={`max-w-[85%] px-3 py-2 rounded-xl text-sm ${msg.role === "user" ? "bg-secondary" : "bg-primary text-primary-foreground ml-auto"}`}>
+                          {msg.content}
+                        </div>
+                        {msg.admin_reply && (
+                          <div className="max-w-[85%] px-3 py-2 rounded-xl text-sm bg-primary text-primary-foreground ml-auto">
+                            {msg.admin_reply}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                  <div className="flex gap-2">
+                    <input value={replyText[activeConversationId] || ""} onChange={e => setReplyText(prev => ({ ...prev, [activeConversationId]: e.target.value }))} placeholder="Написать ответ клиенту..." className="flex-1 h-10 px-3 bg-background border border-border rounded-lg text-sm" />
+                    <Button size="sm" className="btn-gold" onClick={() => handleSupportReply(activeConversationId)}>Ответить</Button>
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
         )}
 

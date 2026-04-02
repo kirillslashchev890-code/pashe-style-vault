@@ -17,7 +17,7 @@ interface LowStockTableRow extends LowStockVariant {
 interface StockContextType {
   getVariantStock: (productId: string, size: string, color: string) => number;
   getLowStock: (productId: string) => LowStockVariant | undefined;
-  decrementStock: (productId: string, size: string, color: string, qty: number) => void;
+  decrementStock: (productId: string, size: string, color: string, qty: number) => Promise<void>;
   allLowStock: () => LowStockTableRow[];
   stockLoaded: boolean;
   refreshStock: () => Promise<void>;
@@ -108,28 +108,26 @@ export const StockProvider = ({ children }: { children: ReactNode }) => {
     [stockRecord]
   );
 
-  const decrementStock = useCallback((productId: string, size: string, color: string, qty: number) => {
+  const decrementStock = useCallback(async (productId: string, size: string, color: string, qty: number) => {
     const safeQty = Math.max(1, qty);
     const key = buildKey(productId, size, color);
+    const current = stockRecord[key] ?? DEFAULT_VARIANT_QTY;
+    const newQty = Math.max(0, current - safeQty);
 
-    setStockRecord(prev => {
-      const current = prev[key] ?? DEFAULT_VARIANT_QTY;
-      const newQty = Math.max(0, current - safeQty);
+    setStockRecord(prev => ({ ...prev, [key]: newQty }));
 
-      // Update DB asynchronously
-      supabase
-        .from("stock_levels")
-        .upsert(
-          { product_id: productId, size, color_name: color, quantity: newQty },
-          { onConflict: "product_id,size,color_name" }
-        )
-        .then(({ error }) => {
-          if (error) console.error("Error updating stock:", error);
-        });
+    const { error } = await supabase
+      .from("stock_levels")
+      .upsert(
+        { product_id: productId, size, color_name: color, quantity: newQty },
+        { onConflict: "product_id,size,color_name" }
+      );
 
-      return { ...prev, [key]: newQty };
-    });
-  }, []);
+    if (error) {
+      console.error("Error updating stock:", error);
+      await loadStock();
+    }
+  }, [stockRecord, loadStock]);
 
   const getLowStock = useCallback(
     (productId: string): LowStockVariant | undefined => {
