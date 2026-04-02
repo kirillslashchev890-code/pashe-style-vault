@@ -528,7 +528,7 @@ const Admin = () => {
           <div className="bg-card border border-border rounded-xl overflow-hidden">
             <div className="p-4 border-b border-border flex items-center justify-between">
               <h3 className="font-semibold">Товары с малым остатком (≤10 шт)</h3>
-              <Button variant="outline" size="sm" onClick={refreshStock}>Обновить</Button>
+              <Button variant="outline" size="sm" onClick={async () => { await refreshStock(); toast.success("Остатки обновлены"); }}>Обновить</Button>
             </div>
             <table className="w-full text-sm">
               <thead><tr className="border-b border-border bg-secondary/30">
