@@ -103,22 +103,30 @@ const C = {
   lightBlue: { name: "Голубой", hex: "#87CEEB", folder: "light-blue" } as CEntry,
   brown: { name: "Коричневый", hex: "#8B4513", folder: "brown" } as CEntry,
   burgundy: { name: "Бордовый", hex: "#800020", folder: "burgundy" } as CEntry,
+  red: { name: "Красный", hex: "#CC2936", folder: "red" } as CEntry,
+  olive: { name: "Оливковый", hex: "#556B2F", folder: "olive" } as CEntry,
+  terracotta: { name: "Терракотовый", hex: "#C4622D", folder: "terracotta" } as CEntry,
+  sage: { name: "Шалфей", hex: "#9CAF88", folder: "sage" } as CEntry,
+  charcoal: { name: "Антрацит", hex: "#36454F", folder: "charcoal" } as CEntry,
+  cream: { name: "Кремовый", hex: "#FFFDD0", folder: "cream" } as CEntry,
+  camel: { name: "Кэмел", hex: "#C19A6B", folder: "camel" } as CEntry,
+  wine: { name: "Винный", hex: "#722F37", folder: "wine" } as CEntry,
 };
 
-// Наборы цветов для категорий
+// Наборы цветов для категорий — РАЗНООБРАЗНЫЕ
 const COLOR_SETS = {
-  tshirts: [C.black, C.white, C.gray],
-  outerwear: [C.black, C.navy, C.khaki],
-  shirts: [C.white, C.lightBlue, C.black],
-  pants: [C.black, C.beige, C.gray],
+  tshirts: [C.white, C.navy, C.terracotta],
+  outerwear: [C.navy, C.red, C.camel],
+  shirts: [C.white, C.lightBlue, C.sage],
+  pants: [C.charcoal, C.beige, C.olive],
   jeans: [C.blue, C.black, C.lightBlue],
-  shorts: [C.beige, C.black, C.khaki],
-  sweatshirts: [C.black, C.gray, C.beige],
-  polo: [C.white, C.navy, C.black],
+  shorts: [C.beige, C.navy, C.olive],
+  sweatshirts: [C.charcoal, C.cream, C.burgundy],
+  polo: [C.white, C.navy, C.terracotta],
   shoes: [C.black, C.white, C.brown],
   accessories: [C.black, C.brown, C.navy],
-  caps: [C.black, C.white, C.beige],
-  suits: [C.black, C.navy, C.gray],
+  caps: [C.black, C.cream, C.navy],
+  suits: [C.charcoal, C.navy, C.camel],
 };
 
 const toColors = (entries: CEntry[]) => entries.map(({ name, hex }) => ({ name, hex }));

@@ -3,11 +3,10 @@ import { Play, Pause } from "lucide-react";
 import { useState, useRef } from "react";
 
 // ============================================
-// 🎬 ВИДЕО: Положите файл в public/videos/hero-video.mp4
+// 🎬 ВИДЕО: CDN asset
 // 🖼️ ПОСТЕР: Положите файл в public/videos/video-poster.jpg
-// Рекомендуемый размер видео: 1920x1080
 // ============================================
-const videoSrc = "/videos/hero-video.mp4";
+const videoSrc = "/__l5e/assets-v1/3b124d9d-8880-4573-b26a-fbb5850bd9bc/hero-video.mp4";
 const videoPoster = "/videos/video-poster.jpg";
 
 const VideoSection = () => {

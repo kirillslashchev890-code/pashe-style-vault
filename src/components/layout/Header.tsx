@@ -1,23 +1,17 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Link } from "react-router-dom";
-import { ShoppingBag, User, Menu, Search, Sun, Moon, Eye } from "lucide-react";
+import { ShoppingBag, User, Menu, Search, Sun, Moon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import CategoryDrawer from "./CategoryDrawer";
 import SearchModal from "./SearchModal";
 import { useCart } from "@/hooks/useCart";
 import { useTheme } from "next-themes";
-import { initAccessibilityMode, toggleAccessibilityMode } from "@/lib/accessibility";
 
 const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
-  const [accessibilityEnabled, setAccessibilityEnabled] = useState(false);
   const { itemCount } = useCart();
   const { resolvedTheme, setTheme } = useTheme();
-
-  useEffect(() => {
-    setAccessibilityEnabled(initAccessibilityMode());
-  }, []);
 
   return (
     <>
@@ -41,15 +35,6 @@ const Header = () => {
 
             {/* Right */}
             <div className="flex items-center gap-1">
-              <Button
-                variant="ghost"
-                size="icon"
-                className={`text-foreground/80 hover:text-primary ${accessibilityEnabled ? "text-primary" : ""}`}
-                onClick={() => setAccessibilityEnabled(toggleAccessibilityMode())}
-                title="Версия для слабовидящих"
-              >
-                <Eye size={18} />
-              </Button>
               <Button
                 variant="ghost"
                 size="icon"
