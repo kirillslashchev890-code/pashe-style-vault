@@ -38,15 +38,6 @@ const Header = () => {
               <Button
                 variant="ghost"
                 size="icon"
-                className={`text-foreground/80 hover:text-primary ${accessibilityEnabled ? "text-primary" : ""}`}
-                onClick={() => setAccessibilityEnabled(toggleAccessibilityMode())}
-                title="Версия для слабовидящих"
-              >
-                <Eye size={18} />
-              </Button>
-              <Button
-                variant="ghost"
-                size="icon"
                 className="text-foreground/80 hover:text-primary"
                 onClick={() => setTheme(resolvedTheme === "dark" ? "light" : "dark")}
                 title="Сменить тему"
