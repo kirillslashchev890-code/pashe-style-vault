@@ -1,12 +1,11 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { ShoppingBag, User, Menu, Search, Sun, Moon, Eye } from "lucide-react";
+import { ShoppingBag, User, Menu, Search, Sun, Moon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import CategoryDrawer from "./CategoryDrawer";
 import SearchModal from "./SearchModal";
 import { useCart } from "@/hooks/useCart";
 import { useTheme } from "next-themes";
-import { initAccessibilityMode, toggleAccessibilityMode } from "@/lib/accessibility";
 
 const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
