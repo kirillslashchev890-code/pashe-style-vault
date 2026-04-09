@@ -10,13 +10,8 @@ import { useTheme } from "next-themes";
 const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
-  const [accessibilityEnabled, setAccessibilityEnabled] = useState(false);
   const { itemCount } = useCart();
   const { resolvedTheme, setTheme } = useTheme();
-
-  useEffect(() => {
-    setAccessibilityEnabled(initAccessibilityMode());
-  }, []);
 
   return (
     <>
