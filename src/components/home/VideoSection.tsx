@@ -1,13 +1,13 @@
 import { motion } from "framer-motion";
 import { Play, Pause } from "lucide-react";
 import { useState, useRef } from "react";
+import heroVideoAsset from "/videos/hero-video.mp4.asset.json";
 
 // ============================================
-// 🎬 ВИДЕО: Положите файл в public/videos/hero-video.mp4
+// 🎬 ВИДЕО: CDN asset
 // 🖼️ ПОСТЕР: Положите файл в public/videos/video-poster.jpg
-// Рекомендуемый размер видео: 1920x1080
 // ============================================
-const videoSrc = "/videos/hero-video.mp4";
+const videoSrc = heroVideoAsset.url;
 const videoPoster = "/videos/video-poster.jpg";
 
 const VideoSection = () => {
