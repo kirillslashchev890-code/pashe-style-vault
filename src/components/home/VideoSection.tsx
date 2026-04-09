@@ -1,13 +1,12 @@
 import { motion } from "framer-motion";
 import { Play, Pause } from "lucide-react";
 import { useState, useRef } from "react";
-import heroVideoAsset from "/videos/hero-video.mp4.asset.json";
 
 // ============================================
 // 🎬 ВИДЕО: CDN asset
 // 🖼️ ПОСТЕР: Положите файл в public/videos/video-poster.jpg
 // ============================================
-const videoSrc = heroVideoAsset.url;
+const videoSrc = "/__l5e/assets-v1/3b124d9d-8880-4573-b26a-fbb5850bd9bc/hero-video.mp4";
 const videoPoster = "/videos/video-poster.jpg";
 
 const VideoSection = () => {
