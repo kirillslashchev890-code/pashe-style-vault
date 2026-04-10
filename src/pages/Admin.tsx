@@ -449,7 +449,7 @@ const Admin = () => {
   const revenueByMonth = (() => {
     const months: Record<string, { revenue: number; items: { name: string; qty: number; total: number }[] }> = {};
 
-    // Start with DB snapshots
+    // Start with DB snapshots for historical months
     revenueSnapshots.forEach(snap => {
       months[snap.month_key] = {
         revenue: snap.revenue,
@@ -457,12 +457,21 @@ const Admin = () => {
       };
     });
 
-    // Merge current orders data (override with fresh data)
+    // Override with fresh data from current orders (all non-cancelled)
+    const freshMonths: Record<string, { revenue: number; items: { name: string; qty: number; total: number }[] }> = {};
     orders.filter(o => o.status !== "cancelled").forEach(o => {
       const d = new Date(o.created_at);
       const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
-      if (!months[key]) months[key] = { revenue: 0, items: [] };
-      // Only add if not already in snapshot to avoid double-counting
+      if (!freshMonths[key]) freshMonths[key] = { revenue: 0, items: [] };
+      freshMonths[key].revenue += Number(o.total || 0);
+      (o.items || []).forEach((item: any) => {
+        freshMonths[key].items.push({ name: item.product_name, qty: item.quantity, total: item.price * item.quantity });
+      });
+    });
+
+    // Fresh data overrides snapshots
+    Object.entries(freshMonths).forEach(([key, data]) => {
+      months[key] = data;
     });
 
     return Object.entries(months).sort((a, b) => b[0].localeCompare(a[0]));
