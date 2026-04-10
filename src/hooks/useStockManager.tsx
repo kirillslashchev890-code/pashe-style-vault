@@ -62,17 +62,39 @@ export const StockProvider = ({ children }: { children: ReactNode }) => {
     const products = getManagedProducts();
     const rows: { product_id: string; size: string; color_name: string; quantity: number }[] = [];
 
-    products.forEach((product, idx) => {
+    // Group products by category
+    const byCategory: Record<string, typeof products> = {};
+    products.forEach(p => {
+      if (!byCategory[p.category]) byCategory[p.category] = [];
+      byCategory[p.category].push(p);
+    });
+
+    // Pick 1 random product per category to have low stock on 1 random size+color
+    const lowStockPicks = new Map<string, { size: string; color: string }>();
+    Object.entries(byCategory).forEach(([category, catProducts]) => {
+      const randomProduct = catProducts[Math.floor(Math.random() * catProducts.length)];
+      const availableSizes = randomProduct.sizes.filter(s => s.available).map(s => s.name);
+      const colors = randomProduct.colors.map(c => c.name);
+      if (availableSizes.length > 0 && colors.length > 0) {
+        const randomSize = availableSizes[Math.floor(Math.random() * availableSizes.length)];
+        const randomColor = colors[Math.floor(Math.random() * colors.length)];
+        lowStockPicks.set(randomProduct.id, { size: randomSize, color: randomColor });
+      }
+    });
+
+    products.forEach((product) => {
       const availableSizes = product.sizes.filter(s => s.available).map(s => s.name);
       const colors = product.colors.map(c => c.name);
       if (availableSizes.length === 0 || colors.length === 0) return;
 
+      const lowStockPick = lowStockPicks.get(product.id);
+
       colors.forEach(color => {
         availableSizes.forEach(size => {
           let qty = DEFAULT_VARIANT_QTY;
-          // Some items start with low stock for demo
-          if (idx % 20 === 7) {
-            qty = (idx % 7) + 3;
+          // Only this specific size+color combo gets low stock
+          if (lowStockPick && lowStockPick.size === size && lowStockPick.color === color) {
+            qty = Math.floor(Math.random() * 8) + 2; // 2-9
           }
           rows.push({ product_id: product.id, size, color_name: color, quantity: qty });
         });
