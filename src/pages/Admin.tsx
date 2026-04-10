@@ -855,7 +855,7 @@ const Admin = () => {
           <div className="space-y-6">
             <div className="bg-card border border-border rounded-xl p-5">
               <h3 className="font-semibold mb-2">📊 Отчёт по выручке</h3>
-              <p className="text-sm text-muted-foreground">Данные по доставленным заказам за каждый месяц.</p>
+              <p className="text-sm text-muted-foreground">Данные по всем неотменённым заказам за каждый месяц.</p>
             </div>
             {revenueByMonth.length === 0 ? (
               <p className="text-center text-muted-foreground py-12">Нет данных о выручке</p>
