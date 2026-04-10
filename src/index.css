@@ -167,6 +167,13 @@
     filter: contrast(1.08);
   }
 
+  /* Prevent light theme from washing out product images and videos */
+  .light img,
+  .light video {
+    filter: none !important;
+    mix-blend-mode: normal !important;
+  }
+
   h1, h2, h3, h4, h5, h6 {
     font-family: 'Outfit', sans-serif;
     @apply font-semibold tracking-tight;

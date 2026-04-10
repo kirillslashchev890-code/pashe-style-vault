@@ -456,8 +456,20 @@ const Account = () => {
                             <span>Итого</span>
                             <span>{formatPrice(order.total)}</span>
                           </div>
-                          {order.status === "delivered" && (
+                          {(order.status === "delivered" || order.status === "shipped" || order.status === "processing") && (
                             <div className="border-t border-border mt-3 pt-3">
+                              {order.status !== "delivered" ? (
+                                <div className="flex items-center gap-2 p-3 bg-secondary/50 rounded-lg">
+                                  <AlertCircle size={16} className="text-muted-foreground shrink-0" />
+                                  <p className="text-sm text-muted-foreground">
+                                    Возврат можно оформить только после получения товара.
+                                    {order.shipping_address?.eta_date && (
+                                      <> Ожидаемая дата доставки: <strong>{new Date(order.shipping_address.eta_date).toLocaleDateString("ru-RU", { day: "numeric", month: "long" })}</strong></>
+                                    )}
+                                  </p>
+                                </div>
+                              ) : (
+                              <>
                               <p className="text-sm font-medium flex items-center gap-2 mb-2"><RotateCcw size={14} /> Оформить возврат</p>
                               <div className="space-y-2">
                                 <input
@@ -500,6 +512,8 @@ const Account = () => {
                                   Отправить
                                 </Button>
                               </div>
+                              </>
+                              )}
                             </div>
                           )}
                         </div>

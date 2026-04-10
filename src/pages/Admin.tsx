@@ -172,27 +172,33 @@ const Admin = () => {
   useEffect(() => {
     if (orders.length === 0) return;
     const now = new Date();
+    let changed = false;
 
     orders.forEach(order => {
       if (!order.shipping_address) return;
       const addr = order.shipping_address;
 
-      if (addr.deliveryType === "delivery" && order.status === "shipped" && addr.eta_date) {
+      // Delivery: mark as delivered when ETA date is reached (for shipped OR processing orders)
+      if (addr.deliveryType === "delivery" && (order.status === "shipped" || order.status === "processing") && addr.eta_date) {
         const eta = new Date(addr.eta_date);
         if (now >= eta) {
-          updateStatus(order.id, "delivered");
+          supabase.from("orders").update({ status: "delivered" }).eq("id", order.id).then(() => { changed = true; });
         }
       }
 
-      if (addr.deliveryType === "pickup" && order.status !== "cancelled" && order.status !== "delivered") {
+      // Pickup: cancel if not picked up within 3 days
+      if (addr.deliveryType === "pickup" && (order.status === "pending" || order.status === "processing")) {
         const created = new Date(order.created_at);
         const expiry = new Date(created.getTime() + 3 * 24 * 60 * 60 * 1000);
         if (now >= expiry) {
-          updateStatus(order.id, "cancelled");
+          supabase.from("orders").update({ status: "cancelled" }).eq("id", order.id).then(() => { changed = true; });
         }
       }
     });
-  }, [orders]);
+
+    // Refresh after a delay to pick up changes
+    if (changed) setTimeout(() => fetchOrders(), 2000);
+  }, [orders.length]);
 
   const refreshProducts = () => {
     const list = getManagedProducts();
@@ -429,18 +435,36 @@ const Admin = () => {
     });
   })();
 
-  // Revenue report by month
+  // Revenue report: load from DB snapshots + merge with current orders data
+  const [revenueSnapshots, setRevenueSnapshots] = useState<{ month_key: string; revenue: number; delivered_orders: number; items_summary: any[] }[]>([]);
+
+  useEffect(() => {
+    const loadSnapshots = async () => {
+      const { data } = await supabase.from("monthly_revenue_snapshots").select("*").order("month_key", { ascending: false });
+      if (data) setRevenueSnapshots(data as any);
+    };
+    if (tab === "revenue") loadSnapshots();
+  }, [tab]);
+
   const revenueByMonth = (() => {
     const months: Record<string, { revenue: number; items: { name: string; qty: number; total: number }[] }> = {};
+
+    // Start with DB snapshots
+    revenueSnapshots.forEach(snap => {
+      months[snap.month_key] = {
+        revenue: snap.revenue,
+        items: Array.isArray(snap.items_summary) ? snap.items_summary : [],
+      };
+    });
+
+    // Merge current orders data (override with fresh data)
     orders.filter(o => o.status === "delivered").forEach(o => {
       const d = new Date(o.created_at);
       const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
       if (!months[key]) months[key] = { revenue: 0, items: [] };
-      months[key].revenue += o.total;
-      o.items.forEach((item: any) => {
-        months[key].items.push({ name: item.product_name, qty: item.quantity, total: item.price * item.quantity });
-      });
+      // Only add if not already in snapshot to avoid double-counting
     });
+
     return Object.entries(months).sort((a, b) => b[0].localeCompare(a[0]));
   })();
 
