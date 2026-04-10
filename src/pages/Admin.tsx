@@ -220,7 +220,7 @@ const Admin = () => {
     setOrders(mapped);
 
     const monthMap: Record<string, { revenue: number; delivered_orders: number; items_summary: { name: string; qty: number; total: number }[] }> = {};
-    mapped.filter((o: any) => o.status === "delivered").forEach((o: any) => {
+    mapped.filter((o: any) => o.status !== "cancelled").forEach((o: any) => {
       const d = new Date(o.created_at);
       const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
       if (!monthMap[key]) monthMap[key] = { revenue: 0, delivered_orders: 0, items_summary: [] };
@@ -449,7 +449,7 @@ const Admin = () => {
   const revenueByMonth = (() => {
     const months: Record<string, { revenue: number; items: { name: string; qty: number; total: number }[] }> = {};
 
-    // Start with DB snapshots
+    // Start with DB snapshots for historical months
     revenueSnapshots.forEach(snap => {
       months[snap.month_key] = {
         revenue: snap.revenue,
@@ -457,12 +457,21 @@ const Admin = () => {
       };
     });
 
-    // Merge current orders data (override with fresh data)
-    orders.filter(o => o.status === "delivered").forEach(o => {
+    // Override with fresh data from current orders (all non-cancelled)
+    const freshMonths: Record<string, { revenue: number; items: { name: string; qty: number; total: number }[] }> = {};
+    orders.filter(o => o.status !== "cancelled").forEach(o => {
       const d = new Date(o.created_at);
       const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
-      if (!months[key]) months[key] = { revenue: 0, items: [] };
-      // Only add if not already in snapshot to avoid double-counting
+      if (!freshMonths[key]) freshMonths[key] = { revenue: 0, items: [] };
+      freshMonths[key].revenue += Number(o.total || 0);
+      (o.items || []).forEach((item: any) => {
+        freshMonths[key].items.push({ name: item.product_name, qty: item.quantity, total: item.price * item.quantity });
+      });
+    });
+
+    // Fresh data overrides snapshots
+    Object.entries(freshMonths).forEach(([key, data]) => {
+      months[key] = data;
     });
 
     return Object.entries(months).sort((a, b) => b[0].localeCompare(a[0]));
@@ -510,7 +519,7 @@ const Admin = () => {
         <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-8">
           <div className="bg-card border border-border rounded-xl p-4"><p className="text-muted-foreground text-sm">Заказов</p><p className="text-2xl font-bold">{orders.length}</p></div>
           <div className="bg-card border border-border rounded-xl p-4"><p className="text-muted-foreground text-sm">Пользователей</p><p className="text-2xl font-bold">{users.length}</p></div>
-          <div className="bg-card border border-border rounded-xl p-4"><p className="text-muted-foreground text-sm">Выручка</p><p className="text-2xl font-bold">{formatPrice(orders.filter(o => o.status === "delivered").reduce((s, o) => s + o.total, 0))}</p></div>
+          <div className="bg-card border border-border rounded-xl p-4"><p className="text-muted-foreground text-sm">Выручка</p><p className="text-2xl font-bold">{formatPrice(orders.filter(o => o.status !== "cancelled").reduce((s, o) => s + o.total, 0))}</p></div>
           <div className="bg-card border border-border rounded-xl p-4"><p className="text-muted-foreground text-sm">Ожидают</p><p className="text-2xl font-bold">{orders.filter(o => o.status === "pending").length}</p></div>
           <div className="bg-card border border-border rounded-xl p-4"><p className="text-muted-foreground text-sm">Возвраты</p><p className="text-2xl font-bold">{returns.filter(r => r.status === "pending").length}</p></div>
         </div>
@@ -846,7 +855,7 @@ const Admin = () => {
           <div className="space-y-6">
             <div className="bg-card border border-border rounded-xl p-5">
               <h3 className="font-semibold mb-2">📊 Отчёт по выручке</h3>
-              <p className="text-sm text-muted-foreground">Данные по доставленным заказам за каждый месяц.</p>
+              <p className="text-sm text-muted-foreground">Данные по всем неотменённым заказам за каждый месяц.</p>
             </div>
             {revenueByMonth.length === 0 ? (
               <p className="text-center text-muted-foreground py-12">Нет данных о выручке</p>
