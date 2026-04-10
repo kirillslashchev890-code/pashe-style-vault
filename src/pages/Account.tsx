@@ -456,8 +456,20 @@ const Account = () => {
                             <span>Итого</span>
                             <span>{formatPrice(order.total)}</span>
                           </div>
-                          {order.status === "delivered" && (
+                          {(order.status === "delivered" || order.status === "shipped" || order.status === "processing") && (
                             <div className="border-t border-border mt-3 pt-3">
+                              {order.status !== "delivered" ? (
+                                <div className="flex items-center gap-2 p-3 bg-secondary/50 rounded-lg">
+                                  <AlertCircle size={16} className="text-muted-foreground shrink-0" />
+                                  <p className="text-sm text-muted-foreground">
+                                    Возврат можно оформить только после получения товара.
+                                    {order.shipping_address?.eta_date && (
+                                      <> Ожидаемая дата доставки: <strong>{new Date(order.shipping_address.eta_date).toLocaleDateString("ru-RU", { day: "numeric", month: "long" })}</strong></>
+                                    )}
+                                  </p>
+                                </div>
+                              ) : (
+                              <>
                               <p className="text-sm font-medium flex items-center gap-2 mb-2"><RotateCcw size={14} /> Оформить возврат</p>
                               <div className="space-y-2">
                                 <input
@@ -482,24 +494,37 @@ const Account = () => {
                                 <Button size="sm" variant="outline" disabled={returnSubmitting || !returnReason[order.id]?.trim()} onClick={async () => {
                                   if (!user || !returnReason[order.id]?.trim()) return;
                                   setReturnSubmitting(true);
-                                  const { error } = await supabase.from("return_requests").insert({
-                                    order_id: order.id,
-                                    user_id: user.id,
-                                    reason: returnReason[order.id].trim(),
-                                    return_description: (returnDescription[order.id] || "").trim() || null,
-                                    defect_photo_url: returnPhoto[order.id] || null,
-                                    return_shipping_note: "Если возврат будет одобрен, отправьте товар обратно за свой счёт. Администратор пришлёт инструкции в ответе по заявке.",
-                                  });
-                                  setReturnSubmitting(false);
-                                  if (error) { toast.error("Ошибка при отправке заявки"); return; }
-                                  toast.success("Заявка на возврат отправлена");
-                                  setReturnReason(prev => ({ ...prev, [order.id]: "" }));
-                                  setReturnDescription(prev => ({ ...prev, [order.id]: "" }));
-                                  setReturnPhoto(prev => ({ ...prev, [order.id]: "" }));
+                                  try {
+                                    const photoUrl = returnPhoto[order.id] || null;
+                                    // Truncate very large base64 photos to prevent request failure
+                                    const safePhotoUrl = photoUrl && photoUrl.length > 500000 ? null : photoUrl;
+                                    const { error } = await supabase.from("return_requests").insert({
+                                      order_id: order.id,
+                                      user_id: user.id,
+                                      reason: returnReason[order.id].trim(),
+                                      return_description: (returnDescription[order.id] || "").trim() || null,
+                                      defect_photo_url: safePhotoUrl,
+                                      return_shipping_note: "Если возврат будет одобрен, отправьте товар обратно за свой счёт. Администратор пришлёт инструкции в ответе по заявке.",
+                                    } as any);
+                                    setReturnSubmitting(false);
+                                    if (error) { toast.error("Ошибка при отправке заявки: " + error.message); return; }
+                                    toast.success("Заявка на возврат отправлена");
+                                    setReturnReason(prev => ({ ...prev, [order.id]: "" }));
+                                    setReturnDescription(prev => ({ ...prev, [order.id]: "" }));
+                                    setReturnPhoto(prev => ({ ...prev, [order.id]: "" }));
+                                    // Reload returns
+                                    const { data: newReturns } = await supabase.from("return_requests").select("*").eq("user_id", user.id).order("created_at", { ascending: false });
+                                    setMyReturns(newReturns || []);
+                                  } catch (err) {
+                                    setReturnSubmitting(false);
+                                    toast.error("Произошла ошибка при отправке");
+                                  }
                                 }}>
                                   Отправить
                                 </Button>
                               </div>
+                              </>
+                              )}
                             </div>
                           )}
                         </div>
