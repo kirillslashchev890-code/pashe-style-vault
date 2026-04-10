@@ -494,20 +494,31 @@ const Account = () => {
                                 <Button size="sm" variant="outline" disabled={returnSubmitting || !returnReason[order.id]?.trim()} onClick={async () => {
                                   if (!user || !returnReason[order.id]?.trim()) return;
                                   setReturnSubmitting(true);
-                                  const { error } = await supabase.from("return_requests").insert({
-                                    order_id: order.id,
-                                    user_id: user.id,
-                                    reason: returnReason[order.id].trim(),
-                                    return_description: (returnDescription[order.id] || "").trim() || null,
-                                    defect_photo_url: returnPhoto[order.id] || null,
-                                    return_shipping_note: "Если возврат будет одобрен, отправьте товар обратно за свой счёт. Администратор пришлёт инструкции в ответе по заявке.",
-                                  });
-                                  setReturnSubmitting(false);
-                                  if (error) { toast.error("Ошибка при отправке заявки"); return; }
-                                  toast.success("Заявка на возврат отправлена");
-                                  setReturnReason(prev => ({ ...prev, [order.id]: "" }));
-                                  setReturnDescription(prev => ({ ...prev, [order.id]: "" }));
-                                  setReturnPhoto(prev => ({ ...prev, [order.id]: "" }));
+                                  try {
+                                    const photoUrl = returnPhoto[order.id] || null;
+                                    // Truncate very large base64 photos to prevent request failure
+                                    const safePhotoUrl = photoUrl && photoUrl.length > 500000 ? null : photoUrl;
+                                    const { error } = await supabase.from("return_requests").insert({
+                                      order_id: order.id,
+                                      user_id: user.id,
+                                      reason: returnReason[order.id].trim(),
+                                      return_description: (returnDescription[order.id] || "").trim() || null,
+                                      defect_photo_url: safePhotoUrl,
+                                      return_shipping_note: "Если возврат будет одобрен, отправьте товар обратно за свой счёт. Администратор пришлёт инструкции в ответе по заявке.",
+                                    } as any);
+                                    setReturnSubmitting(false);
+                                    if (error) { toast.error("Ошибка при отправке заявки: " + error.message); return; }
+                                    toast.success("Заявка на возврат отправлена");
+                                    setReturnReason(prev => ({ ...prev, [order.id]: "" }));
+                                    setReturnDescription(prev => ({ ...prev, [order.id]: "" }));
+                                    setReturnPhoto(prev => ({ ...prev, [order.id]: "" }));
+                                    // Reload returns
+                                    const { data: newReturns } = await supabase.from("return_requests").select("*").eq("user_id", user.id).order("created_at", { ascending: false });
+                                    setMyReturns(newReturns || []);
+                                  } catch (err) {
+                                    setReturnSubmitting(false);
+                                    toast.error("Произошла ошибка при отправке");
+                                  }
                                 }}>
                                   Отправить
                                 </Button>
