@@ -22,7 +22,20 @@ interface ShippingAddress {
   delivery_days?: string;
   eta_date?: string;
   pickup_point?: string;
+  paymentMethod?: "online" | "on-receive";
 }
+
+// Revenue rules:
+// - Online card payment → counts immediately (any non-cancelled status)
+// - Pickup or on-receive → counts only when delivered
+const countsAsRevenue = (o: { status: string; shipping_address?: ShippingAddress | null }) => {
+  if (o.status === "cancelled") return false;
+  const addr = o.shipping_address as ShippingAddress | null;
+  const pm = addr?.paymentMethod;
+  if (pm === "online") return true;
+  // For on-receive or pickup (or old orders without paymentMethod) — only when delivered
+  return o.status === "delivered";
+};
 
 interface AdminOrder {
   id: string;
@@ -220,7 +233,7 @@ const Admin = () => {
     setOrders(mapped);
 
     const monthMap: Record<string, { revenue: number; delivered_orders: number; items_summary: { name: string; qty: number; total: number }[] }> = {};
-    mapped.filter((o: any) => o.status !== "cancelled").forEach((o: any) => {
+    mapped.filter((o: any) => countsAsRevenue(o)).forEach((o: any) => {
       const d = new Date(o.created_at);
       const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
       if (!monthMap[key]) monthMap[key] = { revenue: 0, delivered_orders: 0, items_summary: [] };
@@ -457,9 +470,9 @@ const Admin = () => {
       };
     });
 
-    // Override with fresh data from current orders (all non-cancelled)
+    // Override with fresh data from current orders using revenue rules
     const freshMonths: Record<string, { revenue: number; items: { name: string; qty: number; total: number }[] }> = {};
-    orders.filter(o => o.status !== "cancelled").forEach(o => {
+    orders.filter(o => countsAsRevenue(o)).forEach(o => {
       const d = new Date(o.created_at);
       const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
       if (!freshMonths[key]) freshMonths[key] = { revenue: 0, items: [] };
@@ -519,7 +532,7 @@ const Admin = () => {
         <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-8">
           <div className="bg-card border border-border rounded-xl p-4"><p className="text-muted-foreground text-sm">Заказов</p><p className="text-2xl font-bold">{orders.length}</p></div>
           <div className="bg-card border border-border rounded-xl p-4"><p className="text-muted-foreground text-sm">Пользователей</p><p className="text-2xl font-bold">{users.length}</p></div>
-          <div className="bg-card border border-border rounded-xl p-4"><p className="text-muted-foreground text-sm">Выручка</p><p className="text-2xl font-bold">{formatPrice(orders.filter(o => o.status !== "cancelled").reduce((s, o) => s + o.total, 0))}</p></div>
+          <div className="bg-card border border-border rounded-xl p-4"><p className="text-muted-foreground text-sm">Выручка</p><p className="text-2xl font-bold">{formatPrice(orders.filter(o => countsAsRevenue(o)).reduce((s, o) => s + o.total, 0))}</p></div>
           <div className="bg-card border border-border rounded-xl p-4"><p className="text-muted-foreground text-sm">Ожидают</p><p className="text-2xl font-bold">{orders.filter(o => o.status === "pending").length}</p></div>
           <div className="bg-card border border-border rounded-xl p-4"><p className="text-muted-foreground text-sm">Возвраты</p><p className="text-2xl font-bold">{returns.filter(r => r.status === "pending").length}</p></div>
         </div>
