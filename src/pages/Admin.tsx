@@ -342,7 +342,7 @@ const Admin = () => {
     fetchSupportMsgs();
   };
 
-  const saveCurrentProductSettings = () => {
+  const saveCurrentProductSettings = async () => {
     if (!selectedProductId) return;
     const priceNum = Number(editPrice);
     const originalNum = Number(editOriginalPrice);
@@ -352,15 +352,17 @@ const Admin = () => {
       isNew: editIsNew,
       discountUntil: discountUntil || null,
     });
-    refreshProducts();
+    await refreshProducts();
+    toast.success("Настройки товара сохранены");
   };
 
-  const clearDiscount = () => {
+  const clearDiscount = async () => {
     if (!selectedProductId) return;
     upsertProductOverride(selectedProductId, { originalPrice: null, discountUntil: null });
     setEditOriginalPrice("");
     setDiscountUntil("");
-    refreshProducts();
+    await refreshProducts();
+    toast.success("Скидка снята");
   };
 
   const addCustomProduct = () => {
