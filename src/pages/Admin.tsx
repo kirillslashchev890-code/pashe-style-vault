@@ -8,7 +8,7 @@ import { Package, Users, Shield, ArrowLeft, Star, BarChart3, MapPin, CalendarClo
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useStockManager } from "@/hooks/useStockManager";
-import { Product, getManagedProducts, getProductOverrides, saveCustomProduct, upsertProductOverride } from "@/data/products";
+import { Product, getManagedProducts, getProductOverrides, saveCustomProduct, upsertProductOverride, loadAllFromDB } from "@/data/products";
 
 interface ShippingAddress {
   deliveryType?: "delivery" | "pickup";
@@ -213,7 +213,8 @@ const Admin = () => {
     if (changed) setTimeout(() => fetchOrders(), 2000);
   }, [orders.length]);
 
-  const refreshProducts = () => {
+  const refreshProducts = async () => {
+    await loadAllFromDB();
     const list = getManagedProducts();
     setAllProducts(list);
     if (!selectedProductId && list.length > 0) setSelectedProductId(list[0].id);
@@ -223,7 +224,10 @@ const Admin = () => {
     if (!user) return;
     const { data } = await supabase.from("user_roles").select("role").eq("user_id", user.id).eq("role", "admin").maybeSingle();
     setIsAdmin(!!data);
-    if (data) { fetchOrders(); fetchUsers(); fetchReviews(); fetchReturns(); fetchSupportMsgs(); }
+    if (data) { 
+      await loadAllFromDB();
+      fetchOrders(); fetchUsers(); fetchReviews(); fetchReturns(); fetchSupportMsgs(); 
+    }
   };
 
   const fetchOrders = async () => {
@@ -338,7 +342,7 @@ const Admin = () => {
     fetchSupportMsgs();
   };
 
-  const saveCurrentProductSettings = () => {
+  const saveCurrentProductSettings = async () => {
     if (!selectedProductId) return;
     const priceNum = Number(editPrice);
     const originalNum = Number(editOriginalPrice);
@@ -348,18 +352,20 @@ const Admin = () => {
       isNew: editIsNew,
       discountUntil: discountUntil || null,
     });
-    refreshProducts();
+    await refreshProducts();
+    toast.success("Настройки товара сохранены");
   };
 
-  const clearDiscount = () => {
+  const clearDiscount = async () => {
     if (!selectedProductId) return;
     upsertProductOverride(selectedProductId, { originalPrice: null, discountUntil: null });
     setEditOriginalPrice("");
     setDiscountUntil("");
-    refreshProducts();
+    await refreshProducts();
+    toast.success("Скидка снята");
   };
 
-  const addCustomProduct = () => {
+  const addCustomProduct = async () => {
     const price = Number(customProduct.price);
     if (!customProduct.name.trim() || !Number.isFinite(price) || price <= 0) return;
     const original = Number(customProduct.originalPrice);
@@ -368,7 +374,7 @@ const Admin = () => {
       { name: customProduct.color2Name.trim(), hex: customProduct.color2Hex.trim(), image: customProduct.color2Image.trim() },
       { name: customProduct.color3Name.trim(), hex: customProduct.color3Hex.trim(), image: customProduct.color3Image.trim() },
     ].filter(c => c.name && c.hex && c.image);
-    if (preparedColors.length === 0) return;
+    if (preparedColors.length === 0) { toast.error("Добавьте хотя бы один цвет с фото"); return; }
 
     const id = `${customProduct.category}-${Date.now()}`;
     const newProduct: Product = {
@@ -393,7 +399,8 @@ const Admin = () => {
     };
     saveCustomProduct(newProduct);
     setCustomProduct(defaultCustomProduct);
-    refreshProducts();
+    await refreshProducts();
+    toast.success("Товар добавлен");
   };
 
   const statusLabels: Record<string, string> = { pending: "Ожидание", processing: "Подтверждён", shipped: "В пути", delivered: "Доставлен", cancelled: "Отменён" };
