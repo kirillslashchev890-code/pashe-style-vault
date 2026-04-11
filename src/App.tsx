@@ -31,6 +31,8 @@ const App = () => {
     loadAllFromDB().finally(() => setReady(true));
   }, []);
 
+  if (!ready) return null;
+
   return (
     <QueryClientProvider client={queryClient}>
       <ThemeProvider attribute="class" defaultTheme="dark" enableSystem={false}>
