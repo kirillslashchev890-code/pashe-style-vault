@@ -118,6 +118,69 @@ export type Database = {
           },
         ]
       }
+      custom_products: {
+        Row: {
+          brand: string
+          care: string | null
+          category: string
+          color_images: Json
+          colors: Json
+          composition: string | null
+          country: string | null
+          created_at: string
+          description: string | null
+          id: string
+          images: Json
+          is_new: boolean | null
+          name: string
+          original_price: number | null
+          price: number
+          product_key: string
+          sizes: Json
+          subcategory: string | null
+        }
+        Insert: {
+          brand?: string
+          care?: string | null
+          category: string
+          color_images?: Json
+          colors?: Json
+          composition?: string | null
+          country?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          images?: Json
+          is_new?: boolean | null
+          name: string
+          original_price?: number | null
+          price: number
+          product_key: string
+          sizes?: Json
+          subcategory?: string | null
+        }
+        Update: {
+          brand?: string
+          care?: string | null
+          category?: string
+          color_images?: Json
+          colors?: Json
+          composition?: string | null
+          country?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          images?: Json
+          is_new?: boolean | null
+          name?: string
+          original_price?: number | null
+          price?: number
+          product_key?: string
+          sizes?: Json
+          subcategory?: string | null
+        }
+        Relationships: []
+      }
       monthly_revenue_snapshots: {
         Row: {
           created_at: string
@@ -334,6 +397,39 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      product_overrides: {
+        Row: {
+          created_at: string
+          discount_until: string | null
+          id: string
+          is_new: boolean | null
+          original_price: number | null
+          price: number | null
+          product_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          discount_until?: string | null
+          id?: string
+          is_new?: boolean | null
+          original_price?: number | null
+          price?: number | null
+          product_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          discount_until?: string | null
+          id?: string
+          is_new?: boolean | null
+          original_price?: number | null
+          price?: number | null
+          product_id?: string
+          updated_at?: string
+        }
+        Relationships: []
       }
       products: {
         Row: {
