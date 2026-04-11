@@ -8,7 +8,7 @@ import { Package, Users, Shield, ArrowLeft, Star, BarChart3, MapPin, CalendarClo
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useStockManager } from "@/hooks/useStockManager";
-import { Product, getManagedProducts, getProductOverrides, saveCustomProduct, upsertProductOverride } from "@/data/products";
+import { Product, getManagedProducts, getProductOverrides, saveCustomProduct, upsertProductOverride, loadAllFromDB } from "@/data/products";
 
 interface ShippingAddress {
   deliveryType?: "delivery" | "pickup";
