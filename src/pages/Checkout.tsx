@@ -131,6 +131,7 @@ const Checkout = () => {
           pickup_point: "Москва, ул. Тверская, 1",
           delivery_days: "Самовывоз — хранение 3 дня",
           eta_date: new Date().toISOString(),
+          paymentMethod,
         }
       : {
           deliveryType: "delivery" as const,
@@ -143,6 +144,7 @@ const Checkout = () => {
           zip: zip || undefined,
           delivery_days: regionInfo?.days,
           eta_date: eta.toISOString(),
+          paymentMethod,
         };
 
     const { error } = await createOrder(orderItems, total, {
