@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -19,12 +19,16 @@ import Account from "./pages/Account";
 import Admin from "./pages/Admin";
 import NotFound from "./pages/NotFound";
 import { initAccessibilityMode } from "@/lib/accessibility";
+import { loadAllFromDB } from "@/data/products";
 
 const queryClient = new QueryClient();
 
 const App = () => {
+  const [ready, setReady] = useState(false);
+
   useEffect(() => {
     initAccessibilityMode();
+    loadAllFromDB().finally(() => setReady(true));
   }, []);
 
   return (
