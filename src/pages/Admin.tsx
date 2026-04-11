@@ -22,7 +22,20 @@ interface ShippingAddress {
   delivery_days?: string;
   eta_date?: string;
   pickup_point?: string;
+  paymentMethod?: "online" | "on-receive";
 }
+
+// Revenue rules:
+// - Online card payment → counts immediately (any non-cancelled status)
+// - Pickup or on-receive → counts only when delivered
+const countsAsRevenue = (o: { status: string; shipping_address?: ShippingAddress | null }) => {
+  if (o.status === "cancelled") return false;
+  const addr = o.shipping_address as ShippingAddress | null;
+  const pm = addr?.paymentMethod;
+  if (pm === "online") return true;
+  // For on-receive or pickup (or old orders without paymentMethod) — only when delivered
+  return o.status === "delivered";
+};
 
 interface AdminOrder {
   id: string;
