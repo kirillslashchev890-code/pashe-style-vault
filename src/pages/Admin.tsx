@@ -365,7 +365,7 @@ const Admin = () => {
     toast.success("Скидка снята");
   };
 
-  const addCustomProduct = () => {
+  const addCustomProduct = async () => {
     const price = Number(customProduct.price);
     if (!customProduct.name.trim() || !Number.isFinite(price) || price <= 0) return;
     const original = Number(customProduct.originalPrice);
@@ -374,7 +374,7 @@ const Admin = () => {
       { name: customProduct.color2Name.trim(), hex: customProduct.color2Hex.trim(), image: customProduct.color2Image.trim() },
       { name: customProduct.color3Name.trim(), hex: customProduct.color3Hex.trim(), image: customProduct.color3Image.trim() },
     ].filter(c => c.name && c.hex && c.image);
-    if (preparedColors.length === 0) return;
+    if (preparedColors.length === 0) { toast.error("Добавьте хотя бы один цвет с фото"); return; }
 
     const id = `${customProduct.category}-${Date.now()}`;
     const newProduct: Product = {
@@ -399,7 +399,8 @@ const Admin = () => {
     };
     saveCustomProduct(newProduct);
     setCustomProduct(defaultCustomProduct);
-    refreshProducts();
+    await refreshProducts();
+    toast.success("Товар добавлен");
   };
 
   const statusLabels: Record<string, string> = { pending: "Ожидание", processing: "Подтверждён", shipped: "В пути", delivered: "Доставлен", cancelled: "Отменён" };
