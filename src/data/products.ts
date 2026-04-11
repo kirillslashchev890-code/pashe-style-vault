@@ -675,111 +675,142 @@ export interface ProductAdminOverride {
   discountUntil?: string | null;
 }
 
-const PRODUCT_OVERRIDES_KEY = "pashe_product_overrides_v1";
-const CUSTOM_PRODUCTS_KEY = "pashe_custom_products_v1";
+// ---------- In-memory cache (loaded from DB) ----------
 
-const canUseStorage = () => typeof window !== "undefined";
-
-const readJson = <T,>(key: string, fallback: T): T => {
-  if (!canUseStorage()) return fallback;
-
-  try {
-    const raw = window.localStorage.getItem(key);
-    if (!raw) return fallback;
-    return JSON.parse(raw) as T;
-  } catch {
-    return fallback;
-  }
-};
-
-const writeJson = (key: string, value: unknown) => {
-  if (!canUseStorage()) return;
-  window.localStorage.setItem(key, JSON.stringify(value));
-};
+let _overridesCache: Record<string, ProductAdminOverride> = {};
+let _customProductsCache: Product[] = [];
+let _cacheLoaded = false;
 
 const normalizeProductState = (product: Product): Product => {
   const hasDiscount = !!product.originalPrice && product.originalPrice > product.price;
-  return {
-    ...product,
-    isSale: hasDiscount,
-  };
+  return { ...product, isSale: hasDiscount };
 };
 
 const applyOverride = (product: Product, override?: ProductAdminOverride): Product => {
   if (!override) return normalizeProductState(product);
-
   const next: Product = { ...product };
-
-  if (typeof override.price === "number" && Number.isFinite(override.price) && override.price > 0) {
-    next.price = Math.round(override.price);
-  }
-
-  if (override.originalPrice === null) {
-    delete next.originalPrice;
-  } else if (
-    typeof override.originalPrice === "number" &&
-    Number.isFinite(override.originalPrice) &&
-    override.originalPrice > 0
-  ) {
-    next.originalPrice = Math.round(override.originalPrice);
-  }
-
-  if (typeof override.isNew === "boolean") {
-    next.isNew = override.isNew;
-  }
-
-  const isDiscountExpired =
-    !!override.discountUntil &&
-    Number.isFinite(new Date(override.discountUntil).getTime()) &&
-    new Date(override.discountUntil).getTime() < Date.now();
-
-  if (isDiscountExpired) {
-    delete next.originalPrice;
-  }
-
+  if (typeof override.price === "number" && Number.isFinite(override.price) && override.price > 0) next.price = Math.round(override.price);
+  if (override.originalPrice === null) { delete next.originalPrice; }
+  else if (typeof override.originalPrice === "number" && Number.isFinite(override.originalPrice) && override.originalPrice > 0) next.originalPrice = Math.round(override.originalPrice);
+  if (typeof override.isNew === "boolean") next.isNew = override.isNew;
+  const isDiscountExpired = !!override.discountUntil && Number.isFinite(new Date(override.discountUntil).getTime()) && new Date(override.discountUntil).getTime() < Date.now();
+  if (isDiscountExpired) delete next.originalPrice;
   return normalizeProductState(next);
 };
 
-export const getProductOverrides = (): Record<string, ProductAdminOverride> => {
-  return readJson<Record<string, ProductAdminOverride>>(PRODUCT_OVERRIDES_KEY, {});
+// ---------- DB helpers (import supabase lazily) ----------
+
+const getSupabase = async () => {
+  const { supabase } = await import("@/integrations/supabase/client");
+  return supabase;
 };
+
+export const loadOverridesFromDB = async (): Promise<Record<string, ProductAdminOverride>> => {
+  const supabase = await getSupabase();
+  const { data } = await supabase.from("product_overrides").select("*");
+  const map: Record<string, ProductAdminOverride> = {};
+  (data || []).forEach((row: any) => {
+    map[row.product_id] = {
+      price: row.price ? Number(row.price) : undefined,
+      originalPrice: row.original_price !== null && row.original_price !== undefined ? Number(row.original_price) : null,
+      isNew: row.is_new ?? undefined,
+      discountUntil: row.discount_until || null,
+    };
+  });
+  _overridesCache = map;
+  return map;
+};
+
+export const loadCustomProductsFromDB = async (): Promise<Product[]> => {
+  const supabase = await getSupabase();
+  const { data } = await supabase.from("custom_products").select("*");
+  const list: Product[] = (data || []).map((row: any) => normalizeProductState({
+    id: row.product_key,
+    name: row.name,
+    category: row.category,
+    subcategory: row.subcategory || row.category,
+    season: "all",
+    brand: row.brand,
+    description: row.description || "",
+    composition: row.composition || "",
+    care: row.care || "",
+    country: row.country || "",
+    price: Number(row.price),
+    originalPrice: row.original_price ? Number(row.original_price) : undefined,
+    isNew: row.is_new ?? false,
+    colors: row.colors || [],
+    colorImages: row.color_images || {},
+    images: row.images || [],
+    sizes: row.sizes || [],
+  }));
+  _customProductsCache = list;
+  return list;
+};
+
+export const loadAllFromDB = async () => {
+  await Promise.all([loadOverridesFromDB(), loadCustomProductsFromDB()]);
+  _cacheLoaded = true;
+};
+
+export const upsertProductOverrideDB = async (productId: string, override: ProductAdminOverride) => {
+  const supabase = await getSupabase();
+  const row: any = { product_id: productId, updated_at: new Date().toISOString() };
+  if (override.price !== undefined) row.price = override.price;
+  if (override.originalPrice !== undefined) row.original_price = override.originalPrice;
+  if (override.isNew !== undefined) row.is_new = override.isNew;
+  if (override.discountUntil !== undefined) row.discount_until = override.discountUntil;
+  await supabase.from("product_overrides").upsert(row, { onConflict: "product_id" });
+  // Update cache
+  _overridesCache[productId] = { ..._overridesCache[productId], ...override };
+};
+
+export const saveCustomProductDB = async (product: Product) => {
+  const supabase = await getSupabase();
+  await supabase.from("custom_products").upsert({
+    product_key: product.id,
+    name: product.name,
+    category: product.category,
+    subcategory: product.subcategory || product.category,
+    brand: product.brand,
+    description: product.description,
+    composition: product.composition,
+    care: product.care,
+    country: product.country,
+    price: product.price,
+    original_price: product.originalPrice || null,
+    is_new: product.isNew || false,
+    colors: product.colors,
+    color_images: product.colorImages,
+    images: product.images,
+    sizes: product.sizes,
+  } as any, { onConflict: "product_key" });
+  _customProductsCache = [..._customProductsCache.filter(p => p.id !== product.id), normalizeProductState(product)];
+};
+
+// ---------- Sync getters (use cached data) ----------
+
+export const getProductOverrides = (): Record<string, ProductAdminOverride> => _overridesCache;
 
 export const upsertProductOverride = (productId: string, override: ProductAdminOverride) => {
-  const current = getProductOverrides();
-  current[productId] = {
-    ...current[productId],
-    ...override,
-  };
-  writeJson(PRODUCT_OVERRIDES_KEY, current);
+  _overridesCache[productId] = { ..._overridesCache[productId], ...override };
+  // Fire-and-forget DB save
+  upsertProductOverrideDB(productId, override).catch(console.error);
 };
 
-export const removeProductOverride = (productId: string) => {
-  const current = getProductOverrides();
-  delete current[productId];
-  writeJson(PRODUCT_OVERRIDES_KEY, current);
-};
-
-export const getCustomProducts = (): Product[] => {
-  const custom = readJson<Product[]>(CUSTOM_PRODUCTS_KEY, []);
-  return custom.map(normalizeProductState);
-};
+export const getCustomProducts = (): Product[] => _customProductsCache;
 
 export const saveCustomProduct = (product: Product) => {
-  const custom = getCustomProducts();
-  const next = [
-    ...custom.filter((p) => p.id !== product.id),
-    normalizeProductState(product),
-  ];
-  writeJson(CUSTOM_PRODUCTS_KEY, next);
+  _customProductsCache = [..._customProductsCache.filter(p => p.id !== product.id), normalizeProductState(product)];
+  saveCustomProductDB(product).catch(console.error);
 };
 
 export const removeCustomProduct = (productId: string) => {
-  const custom = getCustomProducts().filter((p) => p.id !== productId);
-  writeJson(CUSTOM_PRODUCTS_KEY, custom);
+  _customProductsCache = _customProductsCache.filter(p => p.id !== productId);
+  getSupabase().then(s => s.from("custom_products").delete().eq("product_key", productId)).catch(console.error);
 };
 
 export const getManagedProducts = (): Product[] => {
-  const overrides = getProductOverrides();
+  const overrides = _overridesCache;
   const managedBase = products.map((p) => applyOverride(p, overrides[p.id]));
   return [...managedBase, ...getCustomProducts()];
 };
@@ -803,7 +834,6 @@ export const getSaleProducts = (): Product[] => {
 export const searchProducts = (query: string): Product[] => {
   const searchTerm = query.toLowerCase().trim();
   if (!searchTerm) return [];
-
   return getManagedProducts().filter((p) =>
     p.name.toLowerCase().includes(searchTerm) ||
     p.brand.toLowerCase().includes(searchTerm) ||
@@ -812,3 +842,5 @@ export const searchProducts = (query: string): Product[] => {
     p.colors.some((c) => c.name.toLowerCase().includes(searchTerm))
   );
 };
+
+export const isCacheLoaded = () => _cacheLoaded;
