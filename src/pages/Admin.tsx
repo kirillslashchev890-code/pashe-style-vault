@@ -213,7 +213,8 @@ const Admin = () => {
     if (changed) setTimeout(() => fetchOrders(), 2000);
   }, [orders.length]);
 
-  const refreshProducts = () => {
+  const refreshProducts = async () => {
+    await loadAllFromDB();
     const list = getManagedProducts();
     setAllProducts(list);
     if (!selectedProductId && list.length > 0) setSelectedProductId(list[0].id);
