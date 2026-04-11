@@ -224,7 +224,10 @@ const Admin = () => {
     if (!user) return;
     const { data } = await supabase.from("user_roles").select("role").eq("user_id", user.id).eq("role", "admin").maybeSingle();
     setIsAdmin(!!data);
-    if (data) { fetchOrders(); fetchUsers(); fetchReviews(); fetchReturns(); fetchSupportMsgs(); }
+    if (data) { 
+      await loadAllFromDB();
+      fetchOrders(); fetchUsers(); fetchReviews(); fetchReturns(); fetchSupportMsgs(); 
+    }
   };
 
   const fetchOrders = async () => {
