@@ -138,18 +138,16 @@ export const StockProvider = ({ children }: { children: ReactNode }) => {
 
     setStockRecord(prev => ({ ...prev, [key]: newQty }));
 
-    const { data, error } = await supabase.rpc("decrement_stock", {
-      _product_id: productId,
-      _size: size,
-      _color_name: color,
-      _qty: safeQty,
-    });
+    const { error } = await supabase
+      .from("stock_levels")
+      .upsert(
+        { product_id: productId, size, color_name: color, quantity: newQty },
+        { onConflict: "product_id,size,color_name" }
+      );
 
     if (error) {
       console.error("Error updating stock:", error);
       await loadStock();
-    } else if (typeof data === "number") {
-      setStockRecord(prev => ({ ...prev, [key]: data }));
     }
   }, [stockRecord, loadStock]);
 
