@@ -17,6 +17,12 @@ import Cart from "./pages/Cart";
 import Checkout from "./pages/Checkout";
 import Account from "./pages/Account";
 import Admin from "./pages/Admin";
+import Delivery from "./pages/Delivery";
+import Returns from "./pages/Returns";
+import SizeGuide from "./pages/SizeGuide";
+import Contacts from "./pages/Contacts";
+import Privacy from "./pages/Privacy";
+import Terms from "./pages/Terms";
 import NotFound from "./pages/NotFound";
 import { initAccessibilityMode } from "@/lib/accessibility";
 import { loadAllFromDB } from "@/data/products";
@@ -52,6 +58,12 @@ const App = () => {
                       <Route path="/checkout" element={<Checkout />} />
                       <Route path="/account" element={<Account />} />
                       <Route path="/admin" element={<Admin />} />
+                      <Route path="/delivery" element={<Delivery />} />
+                      <Route path="/returns" element={<Returns />} />
+                      <Route path="/size-guide" element={<SizeGuide />} />
+                      <Route path="/contacts" element={<Contacts />} />
+                      <Route path="/privacy" element={<Privacy />} />
+                      <Route path="/terms" element={<Terms />} />
                       <Route path="*" element={<NotFound />} />
                     </Routes>
                     <SupportChat />
