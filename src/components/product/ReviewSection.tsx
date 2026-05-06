@@ -40,13 +40,12 @@ const ReviewSection = ({ productId }: ReviewSectionProps) => {
   const fetchReviews = async () => {
     const { data } = await supabase
       .from("reviews")
-      .select("id, rating, review_text, created_at, user_id")
+      .select("id, rating, review_text, created_at, user_id, photo_urls")
       .eq("product_id", productId)
       .order("created_at", { ascending: false });
 
     if (!data) return;
 
-    // Get user names from profiles
     const userIds = [...new Set(data.map((r: any) => r.user_id))];
     const { data: profiles } = await supabase
       .from("profiles")
@@ -61,39 +60,56 @@ const ReviewSection = ({ productId }: ReviewSectionProps) => {
       review_text: r.review_text,
       created_at: r.created_at,
       user_name: profileMap.get(r.user_id) || "Покупатель",
+      photo_urls: Array.isArray(r.photo_urls) ? r.photo_urls : [],
     })));
   };
 
   const checkCanReview = async () => {
     if (!user) return;
-    // Check if user has an order with this product
-    const { data: orders } = await supabase
-      .from("orders")
-      .select("id")
-      .eq("user_id", user.id);
-
+    const { data: orders } = await supabase.from("orders").select("id").eq("user_id", user.id);
     if (!orders || orders.length === 0) { setCanReview(false); return; }
 
     const orderIds = orders.map((o: any) => o.id);
     const { data: items } = await supabase
-      .from("order_items")
-      .select("id")
-      .in("order_id", orderIds)
-      .eq("product_id", productId)
-      .limit(1);
+      .from("order_items").select("id").in("order_id", orderIds).eq("product_id", productId).limit(1);
 
     setCanReview((items || []).length > 0);
+  };
+
+  const handlePhotoSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []).slice(0, 5 - photos.length);
+    const valid = files.filter(f => f.type.startsWith("image/") && f.size < 5 * 1024 * 1024);
+    if (valid.length < files.length) toast.error("Только изображения до 5 МБ");
+    setPhotos(prev => [...prev, ...valid].slice(0, 5));
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  };
+
+  const uploadPhotos = async (): Promise<string[]> => {
+    if (!user || photos.length === 0) return [];
+    const urls: string[] = [];
+    for (const file of photos) {
+      const ext = file.name.split(".").pop() || "jpg";
+      const path = `${user.id}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+      const { error } = await supabase.storage.from("review-photos").upload(path, file);
+      if (error) { toast.error("Не удалось загрузить фото"); continue; }
+      const { data } = supabase.storage.from("review-photos").getPublicUrl(path);
+      urls.push(data.publicUrl);
+    }
+    return urls;
   };
 
   const submitReview = async () => {
     if (!user || !canReview) return;
     setIsSubmitting(true);
 
+    const photo_urls = await uploadPhotos();
+
     const { error } = await supabase.from("reviews").insert({
       user_id: user.id,
       product_id: productId,
       rating,
       review_text: text.trim() || null,
+      photo_urls,
     } as any);
 
     setIsSubmitting(false);
@@ -101,8 +117,9 @@ const ReviewSection = ({ productId }: ReviewSectionProps) => {
     toast.success("Отзыв опубликован!");
     setText("");
     setRating(5);
+    setPhotos([]);
     await fetchReviews();
-    setCanReview(false); // prevent duplicate
+    setCanReview(false);
   };
 
   const avgRating = reviews.length > 0
