@@ -1,8 +1,10 @@
 import Layout from "@/components/layout/Layout";
 import HeroSection from "@/components/home/HeroSection";
+import DeliveryMarquee from "@/components/home/DeliveryMarquee";
 import VideoSection from "@/components/home/VideoSection";
 import CategoriesSection from "@/components/home/CategoriesSection";
 import FeaturedProducts from "@/components/home/FeaturedProducts";
+import LookbookSection from "@/components/home/LookbookSection";
 import { motion } from "framer-motion";
 import { ArrowRight, Truck, RefreshCw, Shield, Headphones } from "lucide-react";
 import { Link } from "react-router-dom";
