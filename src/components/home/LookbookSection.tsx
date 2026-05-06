@@ -31,15 +31,15 @@ const LookbookSection = () => {
       const size = p.sizes?.find((s: any) => s.available)?.name || "M";
       const color = p.colors?.[0];
       await addToCart({
-        product_id: p.id,
-        product_name: p.name,
-        product_price: p.price,
-        product_image: (color && p.colorImages?.[color.name]?.[0]) || p.images?.[0] || "/placeholder.svg",
+        productId: p.id,
+        productName: p.name,
+        productPrice: p.price,
+        productImage: (color && p.colorImages?.[color.name]?.[0]) || p.images?.[0] || "/placeholder.svg",
         size,
-        color_id: color?.name,
-        color_name: color?.name,
+        colorId: color?.name,
+        colorName: color?.name,
         quantity: 1,
-      } as any);
+      });
       added++;
     }
     toast.success(`Образ добавлен в корзину (${added} товара)`);
