@@ -63,6 +63,7 @@ interface AdminReview {
   rating: number;
   review_text: string | null;
   created_at: string;
+  photo_urls?: string[];
 }
 
 interface ReturnRequest {
@@ -637,6 +638,15 @@ const Admin = () => {
                   </div>
                 </div>
                 {review.review_text && <p className="text-sm">{review.review_text}</p>}
+                {review.photo_urls && review.photo_urls.length > 0 && (
+                  <div className="flex gap-2 mt-3 flex-wrap">
+                    {review.photo_urls.map((url, i) => (
+                      <a key={i} href={url} target="_blank" rel="noreferrer" className="block w-20 h-20 rounded-lg overflow-hidden border border-border hover:border-primary">
+                        <img src={url} alt="" className="w-full h-full object-cover" />
+                      </a>
+                    ))}
+                  </div>
+                )}
               </div>
             ))}
           </div>

@@ -592,6 +592,7 @@ export type Database = {
           created_at: string
           id: string
           order_id: string | null
+          photo_urls: Json
           product_id: string
           rating: number
           review_text: string | null
@@ -601,6 +602,7 @@ export type Database = {
           created_at?: string
           id?: string
           order_id?: string | null
+          photo_urls?: Json
           product_id: string
           rating?: number
           review_text?: string | null
@@ -610,6 +612,7 @@ export type Database = {
           created_at?: string
           id?: string
           order_id?: string | null
+          photo_urls?: Json
           product_id?: string
           rating?: number
           review_text?: string | null
