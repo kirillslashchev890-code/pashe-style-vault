@@ -13,6 +13,7 @@ interface Review {
   review_text: string | null;
   created_at: string;
   user_name: string;
+  photo_urls: string[];
 }
 
 interface ReviewSectionProps {
@@ -27,6 +28,9 @@ const ReviewSection = ({ productId }: ReviewSectionProps) => {
   const [hoverRating, setHoverRating] = useState(0);
   const [text, setText] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [photos, setPhotos] = useState<File[]>([]);
+  const [lightbox, setLightbox] = useState<{ images: string[]; index: number } | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     fetchReviews();
