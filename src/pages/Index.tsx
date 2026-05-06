@@ -39,11 +39,17 @@ const Index = () => {
       {/* Hero */}
       <HeroSection />
 
+      {/* Бегущая строка с инфо о доставке */}
+      <DeliveryMarquee />
+
       {/* Video Block с овальным квадратом */}
       <VideoSection />
 
       {/* Categories */}
       <CategoriesSection />
+
+      {/* Lookbook */}
+      <LookbookSection />
 
       {/* Featured Products */}
       <FeaturedProducts />
