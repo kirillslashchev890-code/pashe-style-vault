@@ -178,6 +178,44 @@ const ReviewSection = ({ productId }: ReviewSectionProps) => {
             className="w-full bg-background border border-border rounded-lg p-3 text-sm resize-none h-24 focus:outline-none focus:ring-2 focus:ring-ring"
             maxLength={1000}
           />
+
+          {/* Photo upload */}
+          <div className="mt-3">
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              multiple
+              onChange={handlePhotoSelect}
+              className="hidden"
+            />
+            <div className="flex items-center gap-2 flex-wrap">
+              {photos.map((file, idx) => (
+                <div key={idx} className="relative w-16 h-16 rounded-lg overflow-hidden border border-border">
+                  <img src={URL.createObjectURL(file)} alt="" className="w-full h-full object-cover" />
+                  <button
+                    type="button"
+                    onClick={() => setPhotos(prev => prev.filter((_, i) => i !== idx))}
+                    className="absolute top-0.5 right-0.5 w-5 h-5 rounded-full bg-background/80 flex items-center justify-center"
+                  >
+                    <X size={12} />
+                  </button>
+                </div>
+              ))}
+              {photos.length < 5 && (
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  className="w-16 h-16 rounded-lg border border-dashed border-border flex flex-col items-center justify-center text-muted-foreground hover:text-primary hover:border-primary transition-colors"
+                >
+                  <ImagePlus size={18} />
+                  <span className="text-[10px] mt-0.5">Фото</span>
+                </button>
+              )}
+            </div>
+            <p className="text-xs text-muted-foreground mt-2">До 5 фото, макс. 5 МБ каждое</p>
+          </div>
+
           <div className="flex justify-end mt-3">
             <Button onClick={submitReview} disabled={isSubmitting} className="btn-gold">
               <Send size={16} className="mr-2" />
@@ -215,9 +253,31 @@ const ReviewSection = ({ productId }: ReviewSectionProps) => {
                 <StarRating value={review.rating} />
               </div>
               {review.review_text && <p className="text-sm text-foreground/80 mt-2">{review.review_text}</p>}
+              {review.photo_urls && review.photo_urls.length > 0 && (
+                <div className="flex gap-2 mt-3 flex-wrap">
+                  {review.photo_urls.map((url, idx) => (
+                    <button
+                      key={idx}
+                      onClick={() => setLightbox({ images: review.photo_urls, index: idx })}
+                      className="w-20 h-20 rounded-lg overflow-hidden border border-border hover:border-primary transition-colors"
+                    >
+                      <img src={url} alt="" className="w-full h-full object-cover" />
+                    </button>
+                  ))}
+                </div>
+              )}
             </motion.div>
           ))}
         </div>
+      )}
+
+      {lightbox && (
+        <ImageLightbox
+          images={lightbox.images}
+          initialIndex={lightbox.index}
+          isOpen={true}
+          onClose={() => setLightbox(null)}
+        />
       )}
     </div>
   );
