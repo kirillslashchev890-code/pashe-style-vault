@@ -30,7 +30,7 @@ const LookbookSection = () => {
       const p = getProductById(h.id);
       if (!p) continue;
       const size = p.sizes?.find((s: any) => s.available)?.name || "M";
-      const color = p.colors?.[0];
+      const color = p.colors?.find((c: any) => c.name === h.colorName) || p.colors?.[0];
       await addToCart({
         productId: p.id,
         productName: p.name,
@@ -95,7 +95,7 @@ const LookbookSection = () => {
               {hotspots.map((h) => {
                 const p = getProductById(h.id);
                 if (!p) return null;
-                const img = p.colorImages?.[p.colors?.[0]?.name]?.[0] || p.images?.[0] || "/placeholder.svg";
+                const img = p.colorImages?.[h.colorName]?.[0] || p.colorImages?.[p.colors?.[0]?.name]?.[0] || p.images?.[0] || "/placeholder.svg";
                 return (
                   <Link
                     key={h.id}
@@ -106,7 +106,7 @@ const LookbookSection = () => {
                     <img src={img} alt={p.name} className="w-14 h-14 rounded-lg object-cover" />
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium truncate">{p.name}</p>
-                      <p className="text-xs text-muted-foreground">{new Intl.NumberFormat("ru-RU").format(p.price)} ₽</p>
+                      <p className="text-xs text-muted-foreground">{h.colorName} · {new Intl.NumberFormat("ru-RU").format(p.price)} ₽</p>
                     </div>
                   </Link>
                 );
