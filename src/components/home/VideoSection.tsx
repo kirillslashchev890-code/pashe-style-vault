@@ -6,8 +6,9 @@ import { useState, useRef } from "react";
 // 🎬 ВИДЕО: CDN asset
 // 🖼️ ПОСТЕР: Положите файл в public/videos/video-poster.jpg
 // ============================================
-const videoSrc = "/__l5e/assets-v1/3b124d9d-8880-4573-b26a-fbb5850bd9bc/hero-video.mp4";
+const videoSrc = "/videos/video-main.mp4";
 const videoPoster = "/videos/video-poster.jpg";
+const bgVideoSrc = "/videos/video-bg.mp4";
 
 const VideoSection = () => {
   const [isPlaying, setIsPlaying] = useState(false);
@@ -25,8 +26,18 @@ const VideoSection = () => {
   };
 
   return (
-    <section className="py-16 md:py-24">
-      <div className="container mx-auto px-4">
+    <section className="relative py-16 md:py-24 overflow-hidden">
+      {/* Фоновое видео секции */}
+      <video
+        src={bgVideoSrc}
+        autoPlay
+        loop
+        muted
+        playsInline
+        className="absolute inset-0 w-full h-full object-cover -z-10"
+      />
+      <div className="absolute inset-0 bg-background/60 -z-10" />
+      <div className="container mx-auto px-4 relative">
         <motion.div
           initial={{ opacity: 0, y: 40 }}
           whileInView={{ opacity: 1, y: 0 }}
