@@ -210,21 +210,18 @@ const Account = () => {
     setIsLoading(false);
     if (error) { setGeneralError(error); return; }
 
-    const normalizedEmail = email.trim().toLowerCase();
-    if (normalizedEmail === "admin1@gmail.com") {
-      const { data: currentUserData } = await supabase.auth.getUser();
-      const signedInUser = currentUserData.user;
-      if (signedInUser) {
-        const { data: adminRole } = await supabase
-          .from("user_roles")
-          .select("role")
-          .eq("user_id", signedInUser.id)
-          .eq("role", "admin")
-          .maybeSingle();
+    const { data: currentUserData } = await supabase.auth.getUser();
+    const signedInUser = currentUserData.user;
+    if (signedInUser) {
+      const { data: adminRole } = await supabase
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", signedInUser.id)
+        .eq("role", "admin")
+        .maybeSingle();
 
-        if (adminRole) {
-          navigate("/admin");
-        }
+      if (adminRole) {
+        navigate("/admin");
       }
     }
 

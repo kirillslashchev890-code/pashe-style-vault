@@ -12,8 +12,6 @@ interface AuthContextType {
   resetPassword: (email: string) => Promise<{ error: string | null }>;
 }
 
-const ADMIN_EMAIL = "admin1@gmail.com";
-const ADMIN_PASSWORD = "admin1234";
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
@@ -62,22 +60,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const signIn = async (email: string, password: string) => {
-    let { error } = await supabase.auth.signInWithPassword({ email, password });
-
-    if (error && email.trim().toLowerCase() === ADMIN_EMAIL && password === ADMIN_PASSWORD && /invalid login credentials/i.test(error.message)) {
-      const { error: signUpError } = await supabase.auth.signUp({
-        email: ADMIN_EMAIL,
-        password: ADMIN_PASSWORD,
-        options: { data: { full_name: "Администратор" } },
-      });
-
-      if (signUpError && !isAlreadyRegisteredError(signUpError.message)) {
-        return { error: signUpError.message };
-      }
-
-      const { error: retryError } = await supabase.auth.signInWithPassword({ email, password });
-      error = retryError ?? null;
-    }
+    const { error } = await supabase.auth.signInWithPassword({ email, password });
 
     if (error) {
       if (/invalid login credentials/i.test(error.message)) {
