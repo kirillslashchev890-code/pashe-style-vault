@@ -9,12 +9,13 @@ import { getProductById } from "@/data/products";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 
-// Hotspot positions in % (top, left), point to product ids
+// Hotspot positions in % (top, left) on the lookbook image
 const hotspots = [
-  { id: "tshirt-1", top: 45, left: 32, label: "Джинсы" },
-  { id: "sweatshirt-1", top: 38, left: 50, label: "Свитшот" },
-  { id: "sweatshirt-2", top: 50, left: 62, label: "Худи" },
-  { id: "caps-1", top: 22, left: 38, label: "Кепка" },
+  { id: "cap-3", top: 8, left: 50, label: "Панама", colorName: "Тёмно-синий" },
+  { id: "shirt-1", top: 33, left: 50, label: "Рубашка", colorName: "Голубой" },
+  { id: "tshirt-7", top: 32, left: 47, label: "Футболка", colorName: "Белый" },
+  { id: "jeans-3", top: 65, left: 50, label: "Джинсы", colorName: "Чёрный" },
+  { id: "shoes-6", top: 95, left: 50, label: "Кеды", colorName: "Белый" },
 ];
 
 const LookbookSection = () => {
