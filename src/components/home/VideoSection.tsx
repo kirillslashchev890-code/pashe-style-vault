@@ -72,14 +72,14 @@ const VideoSection = () => {
               </div>
 
               {/* Контент поверх видео */}
-              <div className="relative z-10 text-center px-4">
+              <div className="relative z-10 text-center px-4 max-w-full">
                 <motion.div
                   initial={{ scale: 0.9, opacity: 0 }}
                   whileInView={{ scale: 1, opacity: 1 }}
                   viewport={{ once: true }}
                   transition={{ delay: 0.3, duration: 0.5 }}
                 >
-                  <span className="inline-block bg-primary text-primary-foreground text-xs font-semibold tracking-[0.2em] uppercase px-4 py-2 rounded-full mb-6">
+                  <span className="inline-block bg-primary text-primary-foreground text-[10px] sm:text-xs font-semibold tracking-[0.2em] uppercase px-3 py-1.5 sm:px-4 sm:py-2 rounded-full mb-3 sm:mb-6">
                     Новое поступление
                   </span>
                 </motion.div>
@@ -89,7 +89,7 @@ const VideoSection = () => {
                   whileInView={{ y: 0, opacity: 1 }}
                   viewport={{ once: true }}
                   transition={{ delay: 0.4, duration: 0.5 }}
-                  className="text-3xl md:text-5xl lg:text-6xl font-bold text-foreground mb-4"
+                  className="text-xl sm:text-3xl md:text-5xl lg:text-6xl font-bold text-foreground mb-2 sm:mb-4"
                   style={{
                     fontFamily: "'Playfair Display', 'Outfit', serif",
                     fontWeight: 700,
@@ -108,7 +108,7 @@ const VideoSection = () => {
                   whileInView={{ y: 0, opacity: 1 }}
                   viewport={{ once: true }}
                   transition={{ delay: 0.5, duration: 0.5 }}
-                  className="text-muted-foreground text-lg md:text-xl max-w-lg mx-auto mb-8"
+                  className="text-muted-foreground text-xs sm:text-lg md:text-xl max-w-lg mx-auto mb-4 sm:mb-8 hidden sm:block"
                   style={{
                     fontFamily: "'Outfit', sans-serif",
                     fontWeight: 300,
@@ -129,9 +129,10 @@ const VideoSection = () => {
               whileHover={{ scale: 1.1 }}
               whileTap={{ scale: 0.95 }}
               onClick={togglePlay}
-              className="absolute bottom-6 right-6 z-20 w-14 h-14 md:w-16 md:h-16 rounded-full bg-primary text-primary-foreground flex items-center justify-center shadow-lg hover:shadow-xl transition-shadow"
+              className="absolute bottom-3 right-3 sm:bottom-6 sm:right-6 z-20 w-11 h-11 sm:w-14 sm:h-14 md:w-16 md:h-16 rounded-full bg-primary text-primary-foreground flex items-center justify-center shadow-lg hover:shadow-xl transition-shadow"
             >
-              {isPlaying ? <Pause size={24} /> : <Play size={24} className="ml-1" />}
+              {isPlaying ? <Pause size={20} className="sm:hidden" /> : <Play size={20} className="ml-0.5 sm:hidden" />}
+              {isPlaying ? <Pause size={24} className="hidden sm:block" /> : <Play size={24} className="ml-1 hidden sm:block" />}
             </motion.button>
 
             {/* Decorative border glow */}
