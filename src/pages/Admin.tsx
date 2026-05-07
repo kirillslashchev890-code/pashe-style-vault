@@ -92,8 +92,6 @@ interface SupportMsg {
   assigned_admin_id?: string | null;
 }
 
-const ADMIN_EMAIL = "admin1@gmail.com";
-const ADMIN_PASSWORD = "admin1234";
 
 const defaultCustomProduct = {
   name: "",
@@ -130,10 +128,9 @@ const getCurrentSeason = (): string => {
 };
 
 const Admin = () => {
-  const { user, isLoading: authLoading, signIn } = useAuth();
+  const { user, isLoading: authLoading } = useAuth();
   const navigate = useNavigate();
   const [isAdmin, setIsAdmin] = useState<boolean | null>(null);
-  const [autoLoginAttempted, setAutoLoginAttempted] = useState(false);
   const [tab, setTab] = useState<TabId>("orders");
   const [orders, setOrders] = useState<AdminOrder[]>([]);
   const [users, setUsers] = useState<AdminUser[]>([]);
@@ -156,11 +153,10 @@ const Admin = () => {
 
   useEffect(() => {
     if (authLoading) return;
-    if (!user && !autoLoginAttempted) {
-      setAutoLoginAttempted(true);
-      signIn(ADMIN_EMAIL, ADMIN_PASSWORD);
+    if (!user) {
+      navigate("/account");
     }
-  }, [authLoading, user, autoLoginAttempted, signIn]);
+  }, [authLoading, user, navigate]);
 
   useEffect(() => {
     if (user) checkAdmin();
