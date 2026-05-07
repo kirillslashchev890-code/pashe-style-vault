@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import { ArrowUpRight, ChevronLeft, ChevronRight } from "lucide-react";
 import { useRef } from "react";
 import { Button } from "@/components/ui/button";
-import trendsHero from "@/assets/lookbook-rack.jpg";
+import trendsHero from "@/assets/trends-hero.jpg";
 
 const categories = [
   { id: "tshirts", name: "Футболки", tag: "Тренд: оверсайз", image: "/images/categories/tshirts.jpg" },
