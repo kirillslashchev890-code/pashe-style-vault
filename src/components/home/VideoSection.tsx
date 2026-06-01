@@ -99,7 +99,7 @@ const VideoSection = () => {
                   <span className="text-gradient-gold italic">Весна / Лето</span>
                   <br />
                   <span className="text-foreground" style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 300, letterSpacing: "0.15em" }}>
-                    2025
+                    2026
                   </span>
                 </motion.h2>
 
