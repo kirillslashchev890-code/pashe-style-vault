@@ -59,7 +59,7 @@ const LookbookSection = () => {
         >
           <div>
             <p className="text-primary text-xs uppercase tracking-[0.25em] mb-3">Lookbook</p>
-            <h2 className="text-3xl md:text-5xl font-bold">Собери образ</h2>
+            <h2 className="text-3xl md:text-5xl font-bold">Купи готовый образ</h2>
             <p className="text-muted-foreground mt-3 max-w-xl">
               Кликните на точки и добавьте весь образ в корзину одним нажатием.
             </p>
