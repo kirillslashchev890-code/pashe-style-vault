@@ -272,7 +272,7 @@ export const products: Product[] = [
       care: "Машинная стирка при 30°C",
       country: "Турция",
       colorImages: ci("tshirts", id, colors),
-      images: pi("tshirts", id, colors[0].folder),
+      images: pi("tshirts", id, colors[i % colors.length].folder),
       sizes: [
         { name: "XS", available: i % 4 !== 0 },
         { name: "S", available: true },
@@ -308,7 +308,7 @@ export const products: Product[] = [
       care: "Сухая чистка",
       country: "Италия",
       colorImages: ci("outerwear", id, colors),
-      images: pi("outerwear", id, colors[0].folder),
+      images: pi("outerwear", id, colors[i % colors.length].folder),
       sizes: [
         { name: "S", available: i % 3 !== 0 },
         { name: "M", available: true },
@@ -343,7 +343,7 @@ export const products: Product[] = [
       care: "Машинная стирка при 40°C, гладить при средней температуре",
       country: "Португалия",
       colorImages: ci("shirts", id, colors),
-      images: pi("shirts", id, colors[0].folder),
+      images: pi("shirts", id, colors[i % colors.length].folder),
       sizes: [
         { name: "S", available: true },
         { name: "M", available: true },
@@ -378,7 +378,7 @@ export const products: Product[] = [
       care: "Машинная стирка при 30°C",
       country: "Турция",
       colorImages: ci("pants", id, colors),
-      images: pi("pants", id, colors[0].folder),
+      images: pi("pants", id, colors[i % colors.length].folder),
       sizes: [
         { name: "28", available: i % 3 !== 0 },
         { name: "30", available: true },
@@ -413,7 +413,7 @@ export const products: Product[] = [
       care: "Машинная стирка при 30°C, вывернуть наизнанку",
       country: "Турция",
       colorImages: ci("jeans", id, colors),
-      images: pi("jeans", id, colors[0].folder),
+      images: pi("jeans", id, colors[i % colors.length].folder),
       sizes: [
         { name: "28", available: i % 4 !== 0 },
         { name: "30", available: true },
@@ -448,7 +448,7 @@ export const products: Product[] = [
       care: "Машинная стирка при 30°C",
       country: "Турция",
       colorImages: ci("shorts", id, colors),
-      images: pi("shorts", id, colors[0].folder),
+      images: pi("shorts", id, colors[i % colors.length].folder),
       sizes: [
         { name: "S", available: true },
         { name: "M", available: true },
@@ -482,7 +482,7 @@ export const products: Product[] = [
       care: "Машинная стирка при 30°C",
       country: "Португалия",
       colorImages: ci("sweatshirts", id, colors),
-      images: pi("sweatshirts", id, colors[0].folder),
+      images: pi("sweatshirts", id, colors[i % colors.length].folder),
       sizes: [
         { name: "S", available: i % 3 !== 0 },
         { name: "M", available: true },
@@ -517,7 +517,7 @@ export const products: Product[] = [
       care: "Машинная стирка при 30°C",
       country: "Турция",
       colorImages: ci("polo", id, colors),
-      images: pi("polo", id, colors[0].folder),
+      images: pi("polo", id, colors[i % colors.length].folder),
       sizes: [
         { name: "S", available: true },
         { name: "M", available: true },
@@ -552,7 +552,7 @@ export const products: Product[] = [
       care: "Чистить влажной тканью, использовать крем для обуви",
       country: "Италия",
       colorImages: ci("shoes", id, colors),
-      images: pi("shoes", id, colors[0].folder),
+      images: pi("shoes", id, colors[i % colors.length].folder),
       sizes: [
         { name: "40", available: i % 3 !== 0 },
         { name: "41", available: true },
@@ -588,7 +588,7 @@ export const products: Product[] = [
       care: "Избегать попадания влаги",
       country: "Италия",
       colorImages: ci("accessories", id, colors),
-      images: pi("accessories", id, colors[0].folder),
+      images: pi("accessories", id, colors[i % colors.length].folder),
       sizes: [{ name: "ONE SIZE", available: true }],
       colors: toColors(colors),
       isNew: i < 5,
@@ -617,7 +617,7 @@ export const products: Product[] = [
       care: "Ручная стирка",
       country: "Турция",
       colorImages: ci("caps", id, colors),
-      images: pi("caps", id, colors[0].folder),
+      images: pi("caps", id, colors[i % colors.length].folder),
       sizes: [
         { name: "S/M", available: true },
         { name: "L/XL", available: i % 2 === 0 },
@@ -649,7 +649,7 @@ export const products: Product[] = [
       care: "Сухая чистка",
       country: "Италия",
       colorImages: ci("suits", id, colors),
-      images: pi("suits", id, colors[0].folder),
+      images: pi("suits", id, colors[i % colors.length].folder),
       sizes: [
         { name: "46", available: i % 3 !== 0 },
         { name: "48", available: true },
