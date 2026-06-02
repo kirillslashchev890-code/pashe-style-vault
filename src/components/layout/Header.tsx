@@ -30,7 +30,7 @@ const Header = () => {
 
             {/* Center - Logo */}
             <Link to="/" className="absolute left-1/2 -translate-x-1/2">
-              <span className="text-2xl md:text-3xl font-bold tracking-wider text-gradient-gold">PASHE</span>
+              <span className="text-2xl md:text-3xl font-bold tracking-wider text-gradient-gold">ЮВЕНТУС</span>
             </Link>
 
             {/* Right */}

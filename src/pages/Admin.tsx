@@ -96,7 +96,7 @@ interface SupportMsg {
 const defaultCustomProduct = {
   name: "",
   category: "tshirts",
-  brand: "PASHE Original",
+  brand: "ЮВЕНТУС Original",
   description: "",
   composition: "100% хлопок",
   care: "Машинная стирка при 30°C",
@@ -380,7 +380,7 @@ const Admin = () => {
       category: customProduct.category,
       subcategory: customProduct.category,
       season: "all",
-      brand: customProduct.brand.trim() || "PASHE Original",
+      brand: customProduct.brand.trim() || "ЮВЕНТУС Original",
       description: customProduct.description.trim() || "Описание товара",
       composition: customProduct.composition.trim() || "100% хлопок",
       care: customProduct.care.trim() || "Машинная стирка при 30°C",

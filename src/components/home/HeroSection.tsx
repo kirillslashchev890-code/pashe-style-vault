@@ -40,7 +40,7 @@ const HeroSection = () => {
           <motion.img
             key={currentSlide}
             src={heroImages[currentSlide]}
-            alt="PASHE fashion"
+            alt="ЮВЕНТУС fashion"
             className="w-full h-full object-cover"
             initial={{ opacity: 0, scale: 1.05 }}
             animate={{ opacity: 1, scale: 1 }}

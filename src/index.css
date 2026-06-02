@@ -4,7 +4,7 @@
 @tailwind components;
 @tailwind utilities;
 
-/* PASHE - Premium Men's Fashion Store
+/* ЮВЕНТУС - Premium Men's Fashion Store
    Design System: Dark luxury aesthetic with warm gold accents
    Typography: Outfit - modern, clean, fashionable
 */
@@ -43,7 +43,7 @@
 
     --radius: 0.75rem;
 
-    /* Custom colors for PASHE */
+    /* Custom colors for ЮВЕНТУС */
     --gold: 38 45% 55%;
     --gold-light: 40 50% 70%;
     --gold-dark: 35 40% 40%;
