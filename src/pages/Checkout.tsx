@@ -162,7 +162,52 @@ const Checkout = () => {
     }
 
     await clearCart();
-    toast.success("Заказ успешно оформлен! 🎉");
+
+    // Генерируем чек как текстовый документ
+    const orderNo = `JV-${Date.now()}`;
+    const fmt = (n: number) =>
+      new Intl.NumberFormat("ru-RU", { style: "currency", currency: "RUB", minimumFractionDigits: 0 }).format(n);
+    const lines: string[] = [];
+    lines.push("ЮВЕНТУС — Чек об оплате заказа");
+    lines.push("================================");
+    lines.push(`Номер заказа: ${orderNo}`);
+    lines.push(`Дата: ${new Date().toLocaleString("ru-RU")}`);
+    lines.push(`Покупатель: ${user?.email ?? "—"}`);
+    lines.push(`Телефон: ${parsedPhone.data}`);
+    lines.push("");
+    lines.push("Состав заказа:");
+    lines.push("--------------------------------");
+    orderItems.forEach((it, i) => {
+      lines.push(
+        `${i + 1}. ${it.product_name} — ${it.color_name ?? "—"}, размер ${it.size}, ${it.quantity} шт. × ${fmt(it.product_price)} = ${fmt(it.product_price * it.quantity)}`
+      );
+    });
+    lines.push("--------------------------------");
+    lines.push(`Сумма товаров: ${fmt(subtotal)}`);
+    if (discount > 0) lines.push(`Скидка (первый заказ −10%): −${fmt(discount)}`);
+    lines.push(`Доставка: ${finalShipping === 0 ? "Бесплатно" : fmt(finalShipping)}`);
+    lines.push(`ИТОГО: ${fmt(total)}`);
+    lines.push("");
+    lines.push(`Способ оплаты: ${paymentMethod === "online" ? "Онлайн картой" : "При получении"}`);
+    if (shippingAddress.deliveryType === "pickup") {
+      lines.push(`Доставка: Самовывоз`);
+      lines.push(`Пункт: ${shippingAddress.pickup_point}`);
+      lines.push(`Срок: ${shippingAddress.delivery_days}`);
+    } else {
+      lines.push(`Доставка: Курьером`);
+      lines.push(`Адрес: ${shippingAddress.region}, ${shippingAddress.city}, ${shippingAddress.street}${shippingAddress.apartment ? `, кв. ${shippingAddress.apartment}` : ""}${shippingAddress.zip ? `, ${shippingAddress.zip}` : ""}`);
+      if (shippingAddress.delivery_days) lines.push(`Срок: ${shippingAddress.delivery_days}`);
+      lines.push(`Ожидаемая дата: ${new Date(shippingAddress.eta_date).toLocaleDateString("ru-RU")}`);
+    }
+    if (safeNotes) {
+      lines.push("");
+      lines.push(`Комментарий: ${safeNotes}`);
+    }
+    lines.push("");
+    lines.push("Спасибо за покупку в ЮВЕНТУС!");
+    downloadTextFile(`uventus-чек-${orderNo}.txt`, lines.join("\n"));
+
+    toast.success("Заказ оформлен! Чек сохранён в файл 🎉");
     setIsOrdering(false);
     navigate("/account");
   };
