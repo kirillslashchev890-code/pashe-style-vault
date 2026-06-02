@@ -36,7 +36,7 @@ const VideoSection = () => {
         playsInline
         className="absolute inset-0 w-full h-full object-cover -z-10"
       />
-      <div className="absolute inset-0 bg-background/60 -z-10" />
+      <div className="absolute inset-0 bg-black/60 -z-10" />
       <div className="container mx-auto px-4 relative">
         <motion.div
           initial={{ opacity: 0, y: 40 }}
