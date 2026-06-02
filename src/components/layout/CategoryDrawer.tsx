@@ -154,7 +154,7 @@ const categories = [
 ];
 
 const brands = [
-  "PASHE Original",
+  "ЮВЕНТУС Original",
   "Premium Line",
   "Sport Collection",
   "Urban Style",

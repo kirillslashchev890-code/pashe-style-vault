@@ -10,7 +10,7 @@ const Footer = () => {
           <div className="md:col-span-1">
             <Link to="/" className="inline-block">
               <span className="text-3xl font-bold tracking-wider text-gradient-gold">
-                PASHE
+                ЮВЕНТУС
               </span>
             </Link>
             <p className="mt-4 text-muted-foreground text-sm leading-relaxed">
@@ -97,7 +97,7 @@ const Footer = () => {
             <h4 className="font-semibold text-foreground mb-4">Контакты</h4>
             <ul className="space-y-3 text-sm text-muted-foreground">
               <li>+7 (999) 123-45-67</li>
-              <li>info@pashe.ru</li>
+              <li>info@uventus.ru</li>
               <li>Москва, ул. Тверская, 1</li>
               <li className="text-xs pt-2">Пн-Вс: 10:00 - 22:00</li>
             </ul>
@@ -107,7 +107,7 @@ const Footer = () => {
         <div className="border-t border-border mt-12 pt-8 flex flex-col md:flex-row items-center justify-between gap-4">
           <div className="text-center md:text-left">
             <p className="text-muted-foreground text-sm">
-              © 2025 PASHE. Все права защищены.
+              © 2025 ЮВЕНТУС. Все права защищены.
             </p>
             <p className="text-muted-foreground text-xs mt-1">
               Разработчик: Слащев К.А.

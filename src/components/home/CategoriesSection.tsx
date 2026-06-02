@@ -41,7 +41,7 @@ const CategoriesSection = () => {
           className="relative rounded-3xl overflow-hidden mb-8 aspect-[4/5] sm:aspect-[16/9] md:aspect-[21/8]"
         >
           <img src={trendsHero} alt="Гид по трендам" className="absolute inset-0 w-full h-full object-cover" />
-          <div className="absolute inset-0 bg-gradient-to-t from-background via-background/60 to-background/10 sm:bg-gradient-to-r sm:from-background/80 sm:via-background/40 sm:to-transparent" />
+          <div className="absolute inset-0 bg-gradient-to-t from-black via-black/60 to-black/10 sm:bg-gradient-to-r sm:from-black/80 sm:via-black/40 sm:to-transparent" />
           <div className="relative z-10 h-full flex flex-col justify-end sm:justify-center p-5 sm:p-8 md:p-14 sm:max-w-xl">
             <p className="text-primary text-[10px] sm:text-xs uppercase tracking-[0.3em] mb-2 sm:mb-3">SS&apos;26</p>
             <h2 className="text-3xl sm:text-4xl md:text-6xl font-black uppercase leading-none mb-3 sm:mb-4">Гид<br />по трендам</h2>

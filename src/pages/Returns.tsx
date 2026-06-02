@@ -28,7 +28,7 @@ const Returns = () => (
           <section>
             <h2 className="text-2xl font-semibold mb-3">Как оформить возврат</h2>
             <ol className="text-muted-foreground space-y-2 list-decimal list-inside">
-              <li>Напишите нам на info@pashe.ru или в чат на сайте.</li>
+              <li>Напишите нам на info@uventus.ru или в чат на сайте.</li>
               <li>Получите бланк возврата и инструкцию.</li>
               <li>Отправьте товар через любую транспортную компанию.</li>
               <li>После проверки мы вернём деньги тем же способом, что и оплата.</li>

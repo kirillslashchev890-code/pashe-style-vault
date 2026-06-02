@@ -12,7 +12,7 @@ const Contacts = () => (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-12">
           {[
             { icon: Phone, title: "Телефон", value: "+7 (999) 123-45-67", href: "tel:+79991234567" },
-            { icon: Mail, title: "E-mail", value: "info@pashe.ru", href: "mailto:info@pashe.ru" },
+            { icon: Mail, title: "E-mail", value: "info@uventus.ru", href: "mailto:info@uventus.ru" },
             { icon: MapPin, title: "Шоурум", value: "Москва, ул. Тверская, 1" },
             { icon: Clock, title: "График работы", value: "Ежедневно 10:00 – 22:00" },
           ].map((c) => (
