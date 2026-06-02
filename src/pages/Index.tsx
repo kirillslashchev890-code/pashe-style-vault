@@ -37,6 +37,30 @@ const features = [
 ];
 
 const Index = () => {
+  const [newsletterEmail, setNewsletterEmail] = useState("");
+
+  const handleNewsletterSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    const email = newsletterEmail.trim();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      toast.error("Введите корректный email");
+      return;
+    }
+    const promo = "JUVENTUS10";
+    const content =
+      `ЮВЕНТУС — Подтверждение подписки на рассылку\n` +
+      `==============================================\n\n` +
+      `Email: ${email}\n` +
+      `Дата: ${new Date().toLocaleString("ru-RU")}\n\n` +
+      `Спасибо за подписку!\n` +
+      `Ваш промокод на скидку 10% на первый заказ: ${promo}\n\n` +
+      `Сохраните этот файл — промокод действует на первый заказ.\n` +
+      `С уважением, команда ЮВЕНТУС.\n`;
+    downloadTextFile(`uventus-подписка-${Date.now()}.txt`, content);
+    toast.success(`Промокод ${promo} сохранён в файл`);
+    setNewsletterEmail("");
+  };
+
   return (
     <Layout>
       {/* Hero */}
