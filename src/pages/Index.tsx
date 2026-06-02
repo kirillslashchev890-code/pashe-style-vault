@@ -121,13 +121,16 @@ const Index = () => {
             <p className="text-muted-foreground mb-8">
               Подпишитесь на рассылку и получите скидку 10% на первый заказ
             </p>
-            <form className="flex flex-col sm:flex-row gap-4 max-w-md mx-auto">
+            <form onSubmit={handleNewsletterSubmit} className="flex flex-col sm:flex-row gap-4 max-w-md mx-auto">
               <input
                 type="email"
+                required
+                value={newsletterEmail}
+                onChange={(e) => setNewsletterEmail(e.target.value)}
                 placeholder="Ваш email"
                 className="flex-1 px-4 py-3 rounded-lg bg-secondary border border-border text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary"
               />
-              <Button className="btn-gold px-6 py-3">
+              <Button type="submit" className="btn-gold px-6 py-3">
                 Подписаться
                 <ArrowRight className="ml-2 h-4 w-4" />
               </Button>
