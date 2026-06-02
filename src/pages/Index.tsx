@@ -1,3 +1,4 @@
+import { useState } from "react";
 import Layout from "@/components/layout/Layout";
 import HeroSection from "@/components/home/HeroSection";
 import DeliveryMarquee from "@/components/home/DeliveryMarquee";
@@ -9,6 +10,8 @@ import { motion } from "framer-motion";
 import { ArrowRight, Truck, RefreshCw, Shield, Headphones } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
+import { toast } from "sonner";
+import { downloadTextFile } from "@/lib/textFile";
 
 const features = [
   {
