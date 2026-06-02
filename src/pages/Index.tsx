@@ -1,3 +1,4 @@
+import { useState } from "react";
 import Layout from "@/components/layout/Layout";
 import HeroSection from "@/components/home/HeroSection";
 import DeliveryMarquee from "@/components/home/DeliveryMarquee";
@@ -9,6 +10,8 @@ import { motion } from "framer-motion";
 import { ArrowRight, Truck, RefreshCw, Shield, Headphones } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
+import { toast } from "sonner";
+import { downloadTextFile } from "@/lib/textFile";
 
 const features = [
   {
@@ -34,6 +37,30 @@ const features = [
 ];
 
 const Index = () => {
+  const [newsletterEmail, setNewsletterEmail] = useState("");
+
+  const handleNewsletterSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    const email = newsletterEmail.trim();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      toast.error("Введите корректный email");
+      return;
+    }
+    const promo = "JUVENTUS10";
+    const content =
+      `ЮВЕНТУС — Подтверждение подписки на рассылку\n` +
+      `==============================================\n\n` +
+      `Email: ${email}\n` +
+      `Дата: ${new Date().toLocaleString("ru-RU")}\n\n` +
+      `Спасибо за подписку!\n` +
+      `Ваш промокод на скидку 10% на первый заказ: ${promo}\n\n` +
+      `Сохраните этот файл — промокод действует на первый заказ.\n` +
+      `С уважением, команда ЮВЕНТУС.\n`;
+    downloadTextFile(`uventus-подписка-${Date.now()}.txt`, content);
+    toast.success(`Промокод ${promo} сохранён в файл`);
+    setNewsletterEmail("");
+  };
+
   return (
     <Layout>
       {/* Hero */}
@@ -94,13 +121,16 @@ const Index = () => {
             <p className="text-muted-foreground mb-8">
               Подпишитесь на рассылку и получите скидку 10% на первый заказ
             </p>
-            <form className="flex flex-col sm:flex-row gap-4 max-w-md mx-auto">
+            <form onSubmit={handleNewsletterSubmit} className="flex flex-col sm:flex-row gap-4 max-w-md mx-auto">
               <input
                 type="email"
+                required
+                value={newsletterEmail}
+                onChange={(e) => setNewsletterEmail(e.target.value)}
                 placeholder="Ваш email"
                 className="flex-1 px-4 py-3 rounded-lg bg-secondary border border-border text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary"
               />
-              <Button className="btn-gold px-6 py-3">
+              <Button type="submit" className="btn-gold px-6 py-3">
                 Подписаться
                 <ArrowRight className="ml-2 h-4 w-4" />
               </Button>
