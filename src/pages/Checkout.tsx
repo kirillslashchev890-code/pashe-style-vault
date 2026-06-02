@@ -14,6 +14,7 @@ import { useStockManager } from "@/hooks/useStockManager";
 import { toast } from "sonner";
 import { deliveryRegions, getDeliveryCost, getCitiesByRegion } from "@/data/deliveryRegions";
 import { getProductById } from "@/data/products";
+import { downloadTextFile } from "@/lib/textFile";
 
 const phoneSchema = z.string().regex(/^8\d{10}$/, { message: "Введите номер в формате 8XXXXXXXXXX" });
 
