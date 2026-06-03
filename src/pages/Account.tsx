@@ -5,13 +5,14 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { motion } from "framer-motion";
-import { User, Package, Heart, LogOut, Settings, Mail, Lock, Eye, EyeOff, AlertCircle, Trash2, Camera, Shield, RotateCcw } from "lucide-react";
+import { User, Package, Heart, LogOut, Settings, Mail, Lock, Eye, EyeOff, AlertCircle, Trash2, Camera, Shield, RotateCcw, Download } from "lucide-react";
 import { z } from "zod";
 import { useAuth } from "@/hooks/useAuth";
 import { useWishlist } from "@/hooks/useWishlist";
 import { useOrders } from "@/hooks/useOrders";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { downloadTextFile } from "@/lib/textFile";
 
 type TabType = "profile" | "orders" | "wishlist" | "returns" | "settings";
 type AuthMode = "login" | "register";
