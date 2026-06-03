@@ -5,13 +5,14 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { motion } from "framer-motion";
-import { User, Package, Heart, LogOut, Settings, Mail, Lock, Eye, EyeOff, AlertCircle, Trash2, Camera, Shield, RotateCcw } from "lucide-react";
+import { User, Package, Heart, LogOut, Settings, Mail, Lock, Eye, EyeOff, AlertCircle, Trash2, Camera, Shield, RotateCcw, Download } from "lucide-react";
 import { z } from "zod";
 import { useAuth } from "@/hooks/useAuth";
 import { useWishlist } from "@/hooks/useWishlist";
 import { useOrders } from "@/hooks/useOrders";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { downloadTextFile } from "@/lib/textFile";
 
 type TabType = "profile" | "orders" | "wishlist" | "returns" | "settings";
 type AuthMode = "login" | "register";
@@ -592,6 +593,45 @@ const Account = () => {
                           <p className="text-xs text-muted-foreground mt-1">{formatDate(ret.created_at)}</p>
                           {ret.admin_comment && <p className="text-sm mt-2 p-2 bg-secondary/50 rounded-lg">💬 Ответ: {ret.admin_comment}</p>}
                           {ret.return_shipping_note && <p className="text-xs mt-2 text-muted-foreground">↩️ {ret.return_shipping_note}</p>}
+                          {ret.status === "approved" && (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="mt-3 gap-2"
+                              onClick={() => {
+                                const content = [
+                                  "ЮВЕНТУС — ИНФОРМАЦИЯ О ВОЗВРАТЕ",
+                                  "================================",
+                                  "",
+                                  `Номер возврата: ${ret.id}`,
+                                  `Заказ: #${ret.order_id.slice(0, 8)}`,
+                                  `Дата заявки: ${formatDate(ret.created_at)}`,
+                                  `Статус: ОДОБРЕН`,
+                                  "",
+                                  `Причина: ${ret.reason}`,
+                                  ret.return_description ? `Описание: ${ret.return_description}` : "",
+                                  ret.admin_comment ? `Комментарий администратора: ${ret.admin_comment}` : "",
+                                  "",
+                                  "ВОЗВРАТ ДЕНЕЖНЫХ СРЕДСТВ",
+                                  "--------------------------------",
+                                  "При оплате банковской картой деньги поступят на ту же карту",
+                                  "в течение 3–10 рабочих дней с момента одобрения заявки.",
+                                  "Срок зачисления зависит от банка-эмитента.",
+                                  "",
+                                  "При оплате наличными при получении возврат оформляется",
+                                  "переводом на указанные реквизиты в течение 5 рабочих дней.",
+                                  "",
+                                  "Если деньги не поступили в указанные сроки —",
+                                  "напишите нам: info@uventus.ru",
+                                  "",
+                                  "Спасибо, что выбираете ЮВЕНТУС!",
+                                ].filter(Boolean).join("\n");
+                                downloadTextFile(`uventus-возврат-${ret.id.slice(0,8)}.txt`, content);
+                              }}
+                            >
+                              <Download size={14} /> Скачать информацию о возврате
+                            </Button>
+                          )}
                         </div>
                       ))}
                     </div>
