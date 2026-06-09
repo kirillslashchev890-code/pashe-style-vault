@@ -11,12 +11,13 @@ import { Button } from "@/components/ui/button";
 
 // Hotspot positions in % (top, left) on the lookbook image
 const hotspots = [
-  { id: "cap-3", top: 8, left: 50, label: "Панама", colorName: "Тёмно-синий" },
-  { id: "shirt-1", top: 33, left: 50, label: "Рубашка", colorName: "Голубой" },
-  { id: "tshirt-7", top: 32, left: 47, label: "Футболка", colorName: "Белый" },
-  { id: "jeans-3", top: 65, left: 50, label: "Джинсы", colorName: "Чёрный" },
-  { id: "shoes-6", top: 95, left: 50, label: "Кеды", colorName: "Белый" },
+  { id: "cap-3", top: 7, left: 50, label: "Панама", colorName: "Тёмно-синий" },
+  { id: "tshirt-7", top: 28, left: 45, label: "Футболка", colorName: "Белый" },
+  { id: "shirt-1", top: 42, left: 56, label: "Рубашка", colorName: "Голубой" },
+  { id: "jeans-3", top: 70, left: 50, label: "Джинсы", colorName: "Чёрный" },
+  { id: "shoes-6", top: 93, left: 50, label: "Кеды", colorName: "Белый" },
 ];
+
 
 const LookbookSection = () => {
   const [active, setActive] = useState<string | null>(null);
