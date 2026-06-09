@@ -1,75 +1,46 @@
-import { useState, useEffect } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import { ChevronLeft, ChevronRight, Plus } from "lucide-react";
+import { motion, useScroll, useTransform } from "framer-motion";
+import { Plus } from "lucide-react";
 import { Link } from "react-router-dom";
-
-// ============================================
-// 🖼️ ЗАМЕНИТЕ ИЗОБРАЖЕНИЯ НИЖЕ НА СВОИ
-// Положите фото в папку: public/images/hero/
-// Рекомендуемый размер: 1920x1080
-// ============================================
-const heroImages = [
-  "/images/hero/slide-1.jpg", // 🖼️ Замените: public/images/hero/slide-1.jpg
-  "/images/hero/slide-2.jpg", // 🖼️ Замените: public/images/hero/slide-2.jpg
-  "/images/hero/slide-3.jpg", // 🖼️ Замените: public/images/hero/slide-3.jpg
-];
+import { useRef } from "react";
+import mannequinImg from "@/assets/hero-mannequin.jpg";
 
 const HeroSection = () => {
-  const [currentSlide, setCurrentSlide] = useState(0);
-
-  useEffect(() => {
-    const timer = setInterval(() => {
-      setCurrentSlide((prev) => (prev + 1) % heroImages.length);
-    }, 5000);
-    return () => clearInterval(timer);
-  }, []);
-
-  const nextSlide = () => {
-    setCurrentSlide((prev) => (prev + 1) % heroImages.length);
-  };
-
-  const prevSlide = () => {
-    setCurrentSlide((prev) => (prev - 1 + heroImages.length) % heroImages.length);
-  };
+  const ref = useRef<HTMLDivElement>(null);
+  const { scrollY } = useScroll();
+  // Smooth fade + slight scale of the mannequin tied to scroll position
+  const mannequinOpacity = useTransform(scrollY, [0, 400, 700], [1, 0.6, 0]);
+  const mannequinY = useTransform(scrollY, [0, 700], [0, -80]);
+  const mannequinScale = useTransform(scrollY, [0, 700], [1, 0.95]);
 
   return (
-    <section className="relative h-screen w-full overflow-hidden">
-      {/* Background Images Carousel */}
-      <div className="absolute inset-0 z-0">
-        <AnimatePresence mode="wait">
-          <motion.img
-            key={currentSlide}
-            src={heroImages[currentSlide]}
-            alt="ЮВЕНТУС fashion"
-            className="w-full h-full object-cover"
-            initial={{ opacity: 0, scale: 1.05 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 1.02 }}
-            transition={{ duration: 0.8 }}
-          />
-        </AnimatePresence>
-        {/* Dark overlay for text readability */}
-        <div className="absolute inset-0 bg-black/40" />
-      </div>
+    <section
+      ref={ref}
+      className="relative min-h-screen w-full overflow-hidden bg-background flex items-center"
+    >
+      {/* Subtle radial backdrop */}
+      <div
+        className="absolute inset-0 z-0 opacity-60"
+        style={{
+          background:
+            "radial-gradient(ellipse at 50% 60%, hsl(var(--primary) / 0.08), transparent 60%)",
+        }}
+      />
 
-      {/* Navigation Arrows */}
-      <button
-        onClick={prevSlide}
-        className="absolute left-4 md:left-8 top-1/2 -translate-y-1/2 z-20 w-12 h-12 rounded-full bg-background/20 backdrop-blur-sm border border-foreground/10 flex items-center justify-center text-foreground/80 hover:bg-background/40 hover:text-foreground transition-all"
-        aria-label="Предыдущий слайд"
+      {/* Mannequin centered, fades on scroll */}
+      <motion.div
+        style={{ opacity: mannequinOpacity, y: mannequinY, scale: mannequinScale }}
+        className="absolute inset-0 z-10 flex items-end md:items-center justify-center pointer-events-none"
       >
-        <ChevronLeft size={24} />
-      </button>
-      <button
-        onClick={nextSlide}
-        className="absolute right-4 md:right-8 top-1/2 -translate-y-1/2 z-20 w-12 h-12 rounded-full bg-background/20 backdrop-blur-sm border border-foreground/10 flex items-center justify-center text-foreground/80 hover:bg-background/40 hover:text-foreground transition-all"
-        aria-label="Следующий слайд"
-      >
-        <ChevronRight size={24} />
-      </button>
+        <img
+          src={mannequinImg}
+          alt="ЮВЕНТУС look"
+          className="h-[90vh] md:h-[95vh] w-auto object-contain select-none"
+          draggable={false}
+        />
+      </motion.div>
 
-      {/* Top left corner text */}
-      <div className="absolute top-24 left-6 md:left-12 z-10">
+      {/* Top left text */}
+      <div className="absolute top-24 left-6 md:left-12 z-20">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -83,7 +54,7 @@ const HeroSection = () => {
       </div>
 
       {/* Top center-left text */}
-      <div className="absolute top-24 left-1/4 z-10 hidden md:block">
+      <div className="absolute top-24 left-1/4 z-20 hidden md:block">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -96,27 +67,44 @@ const HeroSection = () => {
         </motion.div>
       </div>
 
-      {/* Main large typography - center */}
-      <div className="absolute inset-0 z-10 flex items-center justify-center px-4">
-        <motion.div
-          initial={{ opacity: 0, scale: 0.95 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ duration: 0.8, delay: 0.1 }}
-          className="text-center select-none"
-        >
-          <h1
-            className="text-[12vw] md:text-[10vw] lg:text-[9vw] font-black uppercase leading-[0.85] tracking-tighter text-foreground"
+      {/* Huge split typography around the mannequin (Aura-store style) */}
+      <div className="absolute inset-0 z-20 pointer-events-none flex items-center">
+        <div className="container mx-auto px-4 md:px-12 flex items-center justify-between">
+          <motion.h1
+            initial={{ opacity: 0, x: -40 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.8, delay: 0.1 }}
+            className="text-[14vw] md:text-[11vw] font-black uppercase leading-[0.85] tracking-tighter text-foreground"
             style={{ fontFamily: "'Outfit', sans-serif" }}
           >
-            <span className="block">СТИЛЬ</span>
-            <span className="block">ДЛЯ</span>
-            <span className="block text-gradient-gold">СМЕЛЫХ</span>
-          </h1>
-        </motion.div>
+            СТИЛЬ
+          </motion.h1>
+          <motion.h1
+            initial={{ opacity: 0, x: 40 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.8, delay: 0.2 }}
+            className="text-[14vw] md:text-[11vw] font-black uppercase leading-[0.85] tracking-tighter text-gradient-gold"
+            style={{ fontFamily: "'Outfit', sans-serif" }}
+          >
+            СМЕЛЫХ
+          </motion.h1>
+        </div>
+      </div>
+
+      {/* Middle "ДЛЯ" connector */}
+      <div className="absolute inset-x-0 top-[68%] md:top-auto md:bottom-32 z-20 flex justify-center pointer-events-none">
+        <motion.span
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, delay: 0.4 }}
+          className="text-foreground/70 text-xs md:text-sm uppercase tracking-[0.4em] font-light"
+        >
+          для
+        </motion.span>
       </div>
 
       {/* Bottom left - description */}
-      <div className="absolute bottom-12 left-6 md:left-12 z-10 max-w-[200px]">
+      <div className="absolute bottom-12 left-6 md:left-12 z-20 max-w-[220px]">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -130,24 +118,8 @@ const HeroSection = () => {
         </motion.div>
       </div>
 
-      {/* Bottom center - slide indicators */}
-      <div className="absolute bottom-12 left-1/2 -translate-x-1/2 z-20 flex items-center gap-3">
-        {heroImages.map((_, index) => (
-          <button
-            key={index}
-            onClick={() => setCurrentSlide(index)}
-            className={`transition-all duration-300 ${
-              currentSlide === index
-                ? "w-8 h-1 bg-primary rounded-full"
-                : "w-2 h-2 rounded-full bg-foreground/30 hover:bg-foreground/50"
-            }`}
-            aria-label={`Слайд ${index + 1}`}
-          />
-        ))}
-      </div>
-
       {/* Bottom right - CTA */}
-      <div className="absolute bottom-12 right-6 md:right-12 z-10">
+      <div className="absolute bottom-12 right-6 md:right-12 z-20">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}

@@ -5,10 +5,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { z } from "zod";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
-import { Link } from "react-router-dom";
 
 interface AuthModalProps {
   isOpen: boolean;
@@ -28,6 +28,8 @@ const AuthModal = ({ isOpen, onClose, onSuccess }: AuthModalProps) => {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [agreePolicy, setAgreePolicy] = useState(false);
+  const [policyOpen, setPolicyOpen] = useState(false);
+  const [policyTab, setPolicyTab] = useState<"privacy" | "terms">("privacy");
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -234,11 +236,12 @@ const AuthModal = ({ isOpen, onClose, onSuccess }: AuthModalProps) => {
                       <Checkbox id="agree-policy" checked={agreePolicy} onCheckedChange={(checked) => setAgreePolicy(!!checked)} className="mt-0.5" />
                       <label htmlFor="agree-policy" className="text-sm text-muted-foreground leading-tight">
                         Я согласен с{" "}
-                        <Link to="/privacy" className="text-primary hover:underline" onClick={(e) => e.stopPropagation()}>политикой конфиденциальности</Link>
+                        <button type="button" onClick={() => { setPolicyTab("privacy"); setPolicyOpen(true); }} className="text-primary hover:underline">политикой конфиденциальности</button>
                         {" "}и{" "}
-                        <Link to="/terms" className="text-primary hover:underline" onClick={(e) => e.stopPropagation()}>условиями использования</Link>
+                        <button type="button" onClick={() => { setPolicyTab("terms"); setPolicyOpen(true); }} className="text-primary hover:underline">условиями использования</button>
                       </label>
                     </div>
+
                   </>
                 )}
 
@@ -269,8 +272,41 @@ const AuthModal = ({ isOpen, onClose, onSuccess }: AuthModalProps) => {
           )}
         </motion.div>
       </motion.div>
+
+      <Dialog open={policyOpen} onOpenChange={setPolicyOpen}>
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>
+              {policyTab === "privacy" ? "Политика конфиденциальности" : "Условия использования"}
+            </DialogTitle>
+          </DialogHeader>
+          {policyTab === "privacy" ? (
+            <div className="space-y-3 text-sm text-muted-foreground leading-relaxed">
+              <p>Интернет-магазин ЮВЕНТУС уважает вашу конфиденциальность и обязуется защищать персональные данные, которые вы предоставляете при регистрации и оформлении заказа.</p>
+              <p><strong className="text-foreground">Какие данные мы собираем:</strong> имя, email, телефон, адрес доставки, история заказов. Эти данные используются исключительно для оформления и доставки заказов, обратной связи и информирования об акциях (если вы подписаны на рассылку).</p>
+              <p><strong className="text-foreground">Передача третьим лицам:</strong> мы не передаём ваши данные третьим лицам, кроме служб доставки и платёжных систем в объёме, необходимом для выполнения заказа.</p>
+              <p><strong className="text-foreground">Хранение и защита:</strong> данные хранятся на защищённых серверах. Доступ к ним имеют только уполномоченные сотрудники.</p>
+              <p><strong className="text-foreground">Ваши права:</strong> вы можете запросить удаление или изменение своих данных, написав на support@uventus.ru.</p>
+              <p>Регистрируясь, вы подтверждаете согласие с обработкой персональных данных в соответствии с настоящей политикой.</p>
+            </div>
+          ) : (
+            <div className="space-y-3 text-sm text-muted-foreground leading-relaxed">
+              <p>Используя сайт ЮВЕНТУС, вы соглашаетесь с настоящими условиями.</p>
+              <p><strong className="text-foreground">Заказы и оплата:</strong> все цены указаны в рублях. Оплата доступна онлайн, наличными при получении или картой курьеру.</p>
+              <p><strong className="text-foreground">Доставка:</strong> сроки и стоимость зависят от региона. Бесплатная доставка при заказе от 15 000 ₽.</p>
+              <p><strong className="text-foreground">Возврат:</strong> возврат товара возможен в течение 14 дней с момента получения при сохранении товарного вида.</p>
+              <p><strong className="text-foreground">Ответственность:</strong> магазин не несёт ответственности за задержки, вызванные действиями служб доставки или форс-мажорными обстоятельствами.</p>
+              <p>Полная версия условий доступна на странице /terms.</p>
+            </div>
+          )}
+          <div className="flex justify-end pt-2">
+            <Button onClick={() => setPolicyOpen(false)}>Закрыть</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </AnimatePresence>
   );
+
 };
 
 export default AuthModal;

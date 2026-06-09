@@ -855,16 +855,17 @@ const Admin = () => {
                   <div className="space-y-3 max-h-[420px] overflow-y-auto pr-1">
                     {activeConversationMessages.map((msg) => (
                       <div key={msg.id} className="space-y-2">
-                        <div className={`max-w-[85%] px-3 py-2 rounded-xl text-sm ${msg.role === "user" ? "bg-secondary" : "bg-primary text-primary-foreground ml-auto"}`}>
+                        <div className={`max-w-[85%] px-3 py-2 rounded-xl text-sm ${msg.role === "user" ? "bg-secondary ml-auto" : "bg-primary text-primary-foreground"}`}>
                           {msg.content}
                         </div>
                         {msg.admin_reply && (
-                          <div className="max-w-[85%] px-3 py-2 rounded-xl text-sm bg-primary text-primary-foreground ml-auto">
+                          <div className="max-w-[85%] px-3 py-2 rounded-xl text-sm bg-primary text-primary-foreground">
                             {msg.admin_reply}
                           </div>
                         )}
                       </div>
                     ))}
+
                   </div>
                   <div className="flex gap-2">
                     <input value={replyText[activeConversationId] || ""} onChange={e => setReplyText(prev => ({ ...prev, [activeConversationId]: e.target.value }))} placeholder="Написать ответ клиенту..." className="flex-1 h-10 px-3 bg-background border border-border rounded-lg text-sm" />
