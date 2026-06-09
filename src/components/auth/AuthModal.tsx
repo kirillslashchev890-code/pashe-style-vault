@@ -28,6 +28,8 @@ const AuthModal = ({ isOpen, onClose, onSuccess }: AuthModalProps) => {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [agreePolicy, setAgreePolicy] = useState(false);
+  const [policyOpen, setPolicyOpen] = useState(false);
+  const [policyTab, setPolicyTab] = useState<"privacy" | "terms">("privacy");
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
