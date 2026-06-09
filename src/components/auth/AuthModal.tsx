@@ -236,11 +236,12 @@ const AuthModal = ({ isOpen, onClose, onSuccess }: AuthModalProps) => {
                       <Checkbox id="agree-policy" checked={agreePolicy} onCheckedChange={(checked) => setAgreePolicy(!!checked)} className="mt-0.5" />
                       <label htmlFor="agree-policy" className="text-sm text-muted-foreground leading-tight">
                         Я согласен с{" "}
-                        <Link to="/privacy" className="text-primary hover:underline" onClick={(e) => e.stopPropagation()}>политикой конфиденциальности</Link>
+                        <button type="button" onClick={() => { setPolicyTab("privacy"); setPolicyOpen(true); }} className="text-primary hover:underline">политикой конфиденциальности</button>
                         {" "}и{" "}
-                        <Link to="/terms" className="text-primary hover:underline" onClick={(e) => e.stopPropagation()}>условиями использования</Link>
+                        <button type="button" onClick={() => { setPolicyTab("terms"); setPolicyOpen(true); }} className="text-primary hover:underline">условиями использования</button>
                       </label>
                     </div>
+
                   </>
                 )}
 
