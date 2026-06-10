@@ -232,10 +232,10 @@ const AuthModal = ({ isOpen, onClose, onSuccess }: AuthModalProps) => {
                       {confirmPasswordError && <p className="text-destructive text-sm mt-1">{confirmPasswordError}</p>}
                     </div>
 
-                    <div className="flex items-start gap-2">
-                      <Checkbox id="agree-policy" checked={agreePolicy} onCheckedChange={(checked) => setAgreePolicy(!!checked)} className="mt-0.5" />
-                      <label htmlFor="agree-policy" className="text-sm text-muted-foreground leading-tight">
-                        Я согласен с{" "}
+                    <div className="flex items-start gap-3 p-3 rounded-lg border border-border bg-secondary/40">
+                      <Checkbox id="agree-policy" checked={agreePolicy} onCheckedChange={(checked) => setAgreePolicy(!!checked)} className="mt-0.5 h-5 w-5" required />
+                      <label htmlFor="agree-policy" className="text-sm text-foreground leading-tight cursor-pointer">
+                        <span className="text-destructive">*</span> Я согласен с{" "}
                         <button type="button" onClick={() => { setPolicyTab("privacy"); setPolicyOpen(true); }} className="text-primary hover:underline">политикой конфиденциальности</button>
                         {" "}и{" "}
                         <button type="button" onClick={() => { setPolicyTab("terms"); setPolicyOpen(true); }} className="text-primary hover:underline">условиями использования</button>
