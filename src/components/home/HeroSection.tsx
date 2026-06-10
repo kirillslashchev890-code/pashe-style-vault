@@ -58,14 +58,14 @@ const HeroSection = () => {
         </motion.div>
       </div>
 
-      {/* Big split typography — СТИЛЬ left, СМЕЛЫХ right, ДЛЯ above head */}
+      {/* Big split typography — СТИЛЬ left, СМЕЛЫХ right */}
       <div className="absolute inset-0 z-20 pointer-events-none flex items-center">
-        <div className="w-full px-4 md:px-10 flex items-center justify-between gap-2 md:gap-4">
+        <div className="w-full px-2 md:px-6 flex items-center justify-between gap-2">
           <motion.h1
             initial={{ opacity: 0, x: -40 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.8, delay: 0.1 }}
-            className="text-[16vw] md:text-[12vw] font-black uppercase leading-[0.85] tracking-tighter text-foreground"
+            className="text-[11vw] md:text-[8.5vw] font-black uppercase leading-[0.85] tracking-tighter text-foreground -ml-1 md:-ml-4"
             style={{ fontFamily: "'Outfit', sans-serif" }}
           >
             СТИЛЬ
@@ -74,7 +74,7 @@ const HeroSection = () => {
             initial={{ opacity: 0, x: 40 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.8, delay: 0.2 }}
-            className="text-[16vw] md:text-[12vw] font-black uppercase leading-[0.85] tracking-tighter text-gradient-gold text-right"
+            className="text-[11vw] md:text-[8.5vw] font-black uppercase leading-[0.85] tracking-tighter text-gradient-gold text-right"
             style={{ fontFamily: "'Outfit', sans-serif" }}
           >
             СМЕЛЫХ
@@ -82,15 +82,16 @@ const HeroSection = () => {
         </div>
       </div>
 
-      {/* "ДЛЯ" above mannequin's head */}
-      <div className="absolute inset-x-0 top-[18%] md:top-[22%] z-20 flex justify-center pointer-events-none">
+      {/* "ДЛЯ" behind mannequin's head — larger, sits behind figure but readable */}
+      <div className="absolute inset-x-0 top-[10%] md:top-[12%] z-[5] flex justify-center pointer-events-none">
         <motion.span
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, delay: 0.4 }}
-          className="text-foreground text-xs md:text-base uppercase tracking-[0.4em] font-medium px-3 py-1 rounded-full bg-background/60 backdrop-blur-sm"
+          className="text-[18vw] md:text-[14vw] font-black uppercase leading-none tracking-tighter text-foreground/25"
+          style={{ fontFamily: "'Outfit', sans-serif", WebkitTextStroke: "1px hsl(var(--foreground) / 0.5)" }}
         >
-          для
+          ДЛЯ
         </motion.span>
       </div>
 

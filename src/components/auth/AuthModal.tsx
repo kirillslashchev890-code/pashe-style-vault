@@ -232,13 +232,19 @@ const AuthModal = ({ isOpen, onClose, onSuccess }: AuthModalProps) => {
                       {confirmPasswordError && <p className="text-destructive text-sm mt-1">{confirmPasswordError}</p>}
                     </div>
 
-                    <div className="flex items-start gap-3 p-3 rounded-lg border border-border bg-secondary/40">
-                      <Checkbox id="agree-policy" checked={agreePolicy} onCheckedChange={(checked) => setAgreePolicy(!!checked)} className="mt-0.5 h-5 w-5" required />
-                      <label htmlFor="agree-policy" className="text-sm text-foreground leading-tight cursor-pointer">
-                        <span className="text-destructive">*</span> Я согласен с{" "}
-                        <button type="button" onClick={() => { setPolicyTab("privacy"); setPolicyOpen(true); }} className="text-primary hover:underline">политикой конфиденциальности</button>
-                        {" "}и{" "}
-                        <button type="button" onClick={() => { setPolicyTab("terms"); setPolicyOpen(true); }} className="text-primary hover:underline">условиями использования</button>
+                    <div className="flex items-start gap-3">
+                      <Checkbox
+                        id="agree-policy"
+                        checked={agreePolicy}
+                        onCheckedChange={(checked) => setAgreePolicy(!!checked)}
+                        className="mt-1 h-5 w-5 rounded-none border-foreground/60 data-[state=checked]:bg-foreground data-[state=checked]:text-background data-[state=checked]:border-foreground"
+                        required
+                      />
+                      <label htmlFor="agree-policy" className="text-xs text-foreground/80 leading-snug cursor-pointer">
+                        Я подтверждаю ознакомление и даю{" "}
+                        <button type="button" onClick={() => { setPolicyTab("terms"); setPolicyOpen(true); }} className="underline hover:text-primary">Согласие на обработку моих персональных данных</button>
+                        {" "}в порядке и на условиях, указанных в{" "}
+                        <button type="button" onClick={() => { setPolicyTab("privacy"); setPolicyOpen(true); }} className="underline hover:text-primary">Политике в отношении обработки персональных данных</button>
                       </label>
                     </div>
 
