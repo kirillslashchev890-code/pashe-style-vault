@@ -136,7 +136,7 @@ const AuthModal = ({ isOpen, onClose, onSuccess }: AuthModalProps) => {
           animate={{ scale: 1, opacity: 1 }}
           exit={{ scale: 0.95, opacity: 0 }}
           onClick={(e) => e.stopPropagation()}
-          className="bg-card rounded-2xl border border-border p-6 w-full max-w-md shadow-xl"
+          className="bg-card rounded-2xl border border-border p-6 w-full max-w-lg shadow-xl"
         >
           <div className="flex items-center justify-between mb-6">
             <h2 className="text-xl font-semibold">
