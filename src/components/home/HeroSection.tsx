@@ -2,12 +2,12 @@ import { motion, useScroll, useTransform } from "framer-motion";
 import { Plus } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useRef } from "react";
-import mannequinImg from "@/assets/hero-mannequin.jpg";
+import mannequinImg from "@/assets/hero-mannequin.png";
+import bgImg from "@/assets/hero-bg.jpg";
 
 const HeroSection = () => {
   const ref = useRef<HTMLDivElement>(null);
   const { scrollY } = useScroll();
-  // Smooth fade + slight scale of the mannequin tied to scroll position
   const mannequinOpacity = useTransform(scrollY, [0, 400, 700], [1, 0.6, 0]);
   const mannequinY = useTransform(scrollY, [0, 700], [0, -80]);
   const mannequinScale = useTransform(scrollY, [0, 700], [1, 0.95]);
@@ -15,18 +15,23 @@ const HeroSection = () => {
   return (
     <section
       ref={ref}
-      className="relative min-h-screen w-full overflow-hidden bg-background flex items-center"
+      className="relative min-h-screen w-full overflow-hidden flex items-center"
     >
-      {/* Subtle radial backdrop */}
+      {/* Blurred background image */}
       <div
-        className="absolute inset-0 z-0 opacity-60"
+        className="absolute inset-0 z-0"
         style={{
-          background:
-            "radial-gradient(ellipse at 50% 60%, hsl(var(--primary) / 0.08), transparent 60%)",
+          backgroundImage: `url(${bgImg})`,
+          backgroundSize: "cover",
+          backgroundPosition: "center",
+          filter: "blur(6px)",
+          transform: "scale(1.08)",
         }}
       />
+      {/* Dim overlay for text contrast */}
+      <div className="absolute inset-0 z-[1] bg-background/40" />
 
-      {/* Mannequin centered, fades on scroll */}
+      {/* Mannequin centered, full width-stretched, fades on scroll */}
       <motion.div
         style={{ opacity: mannequinOpacity, y: mannequinY, scale: mannequinScale }}
         className="absolute inset-0 z-10 flex items-end md:items-center justify-center pointer-events-none"
@@ -34,7 +39,7 @@ const HeroSection = () => {
         <img
           src={mannequinImg}
           alt="ЮВЕНТУС look"
-          className="h-[90vh] md:h-[95vh] w-auto object-contain select-none"
+          className="h-[88vh] md:h-[100vh] w-auto object-contain select-none drop-shadow-2xl"
           draggable={false}
         />
       </motion.div>
@@ -45,7 +50,7 @@ const HeroSection = () => {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, delay: 0.2 }}
-          className="text-foreground/60 text-[10px] md:text-xs uppercase tracking-[0.2em] leading-relaxed font-light"
+          className="text-foreground/70 text-[10px] md:text-xs uppercase tracking-[0.2em] leading-relaxed font-light"
         >
           <p>Добро пожаловать</p>
           <p>в мир стиля</p>
@@ -53,28 +58,14 @@ const HeroSection = () => {
         </motion.div>
       </div>
 
-      {/* Top center-left text */}
-      <div className="absolute top-24 left-1/4 z-20 hidden md:block">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 0.3 }}
-          className="text-foreground/60 text-[10px] md:text-xs uppercase tracking-[0.2em] leading-relaxed font-light"
-        >
-          <p>Премиальная</p>
-          <p>мужская одежда</p>
-          <p>2025</p>
-        </motion.div>
-      </div>
-
-      {/* Huge split typography around the mannequin (Aura-store style) */}
+      {/* Big split typography — СТИЛЬ left, СМЕЛЫХ right, ДЛЯ above head */}
       <div className="absolute inset-0 z-20 pointer-events-none flex items-center">
-        <div className="container mx-auto px-4 md:px-12 flex items-center justify-between">
+        <div className="w-full px-4 md:px-10 flex items-center justify-between gap-2 md:gap-4">
           <motion.h1
             initial={{ opacity: 0, x: -40 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.8, delay: 0.1 }}
-            className="text-[14vw] md:text-[11vw] font-black uppercase leading-[0.85] tracking-tighter text-foreground"
+            className="text-[16vw] md:text-[12vw] font-black uppercase leading-[0.85] tracking-tighter text-foreground"
             style={{ fontFamily: "'Outfit', sans-serif" }}
           >
             СТИЛЬ
@@ -83,7 +74,7 @@ const HeroSection = () => {
             initial={{ opacity: 0, x: 40 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.8, delay: 0.2 }}
-            className="text-[14vw] md:text-[11vw] font-black uppercase leading-[0.85] tracking-tighter text-gradient-gold"
+            className="text-[16vw] md:text-[12vw] font-black uppercase leading-[0.85] tracking-tighter text-gradient-gold text-right"
             style={{ fontFamily: "'Outfit', sans-serif" }}
           >
             СМЕЛЫХ
@@ -91,26 +82,26 @@ const HeroSection = () => {
         </div>
       </div>
 
-      {/* Middle "ДЛЯ" connector */}
-      <div className="absolute inset-x-0 top-[68%] md:top-auto md:bottom-32 z-20 flex justify-center pointer-events-none">
+      {/* "ДЛЯ" above mannequin's head */}
+      <div className="absolute inset-x-0 top-[18%] md:top-[22%] z-20 flex justify-center pointer-events-none">
         <motion.span
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, delay: 0.4 }}
-          className="text-foreground/70 text-xs md:text-sm uppercase tracking-[0.4em] font-light"
+          className="text-foreground text-xs md:text-base uppercase tracking-[0.4em] font-medium px-3 py-1 rounded-full bg-background/60 backdrop-blur-sm"
         >
           для
         </motion.span>
       </div>
 
-      {/* Bottom left - description */}
+      {/* Bottom left description */}
       <div className="absolute bottom-12 left-6 md:left-12 z-20 max-w-[220px]">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, delay: 0.5 }}
         >
-          <p className="text-foreground/50 text-[10px] md:text-xs uppercase tracking-[0.15em] leading-relaxed font-light">
+          <p className="text-foreground/70 text-[10px] md:text-xs uppercase tracking-[0.15em] leading-relaxed font-light">
             Создан для тех, кто<br />
             выбирает качество<br />
             и индивидуальность
@@ -118,7 +109,7 @@ const HeroSection = () => {
         </motion.div>
       </div>
 
-      {/* Bottom right - CTA */}
+      {/* Bottom right CTA */}
       <div className="absolute bottom-12 right-6 md:right-12 z-20">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -126,14 +117,14 @@ const HeroSection = () => {
           transition={{ duration: 0.6, delay: 0.6 }}
           className="flex flex-col items-end gap-3"
         >
-          <p className="text-foreground/50 text-[10px] md:text-xs uppercase tracking-[0.15em] text-right font-light">
+          <p className="text-foreground/70 text-[10px] md:text-xs uppercase tracking-[0.15em] text-right font-light">
             Открой для себя<br />
             стиль нового<br />
             поколения
           </p>
           <Link
             to="/catalog"
-            className="w-12 h-12 rounded-full border border-foreground/30 flex items-center justify-center text-foreground/70 hover:border-primary hover:text-primary transition-all group"
+            className="w-12 h-12 rounded-full border border-foreground/40 bg-background/40 backdrop-blur-sm flex items-center justify-center text-foreground hover:border-primary hover:text-primary transition-all group"
           >
             <Plus size={20} className="group-hover:rotate-90 transition-transform duration-300" />
           </Link>
