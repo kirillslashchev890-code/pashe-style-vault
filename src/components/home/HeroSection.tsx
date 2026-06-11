@@ -82,8 +82,8 @@ const HeroSection = () => {
         </div>
       </div>
 
-      {/* "ДЛЯ" behind mannequin — Л увеличена, выглядывает над головой */}
-      <div className="absolute inset-x-0 top-[6%] md:top-[7%] z-[5] flex justify-center pointer-events-none">
+      {/* "ДЛЯ" behind mannequin — Л увеличена и выше, выглядывает над головой */}
+      <div className="absolute inset-x-0 top-[2%] md:top-[3%] z-[5] flex justify-center pointer-events-none">
         <motion.span
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -92,7 +92,7 @@ const HeroSection = () => {
           style={{ fontFamily: "'Outfit', sans-serif", WebkitTextStroke: "1px hsl(var(--foreground) / 0.5)" }}
         >
           <span className="text-[18vw] md:text-[14vw]">Д</span>
-          <span className="text-[26vw] md:text-[20vw] -mx-[0.5vw] leading-[0.8]">Л</span>
+          <span className="text-[34vw] md:text-[26vw] -mx-[1vw] leading-[0.75]">Л</span>
           <span className="text-[18vw] md:text-[14vw]">Я</span>
         </motion.span>
       </div>

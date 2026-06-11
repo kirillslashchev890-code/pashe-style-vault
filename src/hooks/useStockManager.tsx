@@ -132,24 +132,24 @@ export const StockProvider = ({ children }: { children: ReactNode }) => {
 
   const decrementStock = useCallback(async (productId: string, size: string, color: string, qty: number) => {
     const safeQty = Math.max(1, qty);
-    const key = buildKey(productId, size, color);
-    const current = stockRecord[key] ?? DEFAULT_VARIANT_QTY;
-    const newQty = Math.max(0, current - safeQty);
 
-    setStockRecord(prev => ({ ...prev, [key]: newQty }));
-
-    const { error } = await supabase
-      .from("stock_levels")
-      .upsert(
-        { product_id: productId, size, color_name: color, quantity: newQty },
-        { onConflict: "product_id,size,color_name" }
-      );
+    // Atomic server-side decrement via SECURITY DEFINER RPC — avoids stale local state
+    const { data: newQty, error } = await supabase.rpc("decrement_stock", {
+      _product_id: productId,
+      _size: size,
+      _color_name: color,
+      _qty: safeQty,
+    });
 
     if (error) {
-      console.error("Error updating stock:", error);
+      console.error("Error decrementing stock:", error);
       await loadStock();
+      return;
     }
-  }, [stockRecord, loadStock]);
+
+    const key = buildKey(productId, size, color);
+    setStockRecord(prev => ({ ...prev, [key]: typeof newQty === "number" ? newQty : 0 }));
+  }, [loadStock]);
 
   const getLowStock = useCallback(
     (productId: string): LowStockVariant | undefined => {
