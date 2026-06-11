@@ -78,6 +78,14 @@ const SupportChat = () => {
     }
   }, [open]);
 
+  // Reset chat state whenever the logged-in user changes (logout / switch account)
+  useEffect(() => {
+    setOpen(false);
+    setMessages([]);
+    setLoadedReplyIds(new Set());
+    setInput("");
+  }, [user?.id]);
+
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
   }, [messages]);
